@@ -1,2 +1,3 @@
-# python-repo-template
-Template repository for Python projects
+# Py2UML
+
+Python script that generates UML class diagrams from Python source code.
