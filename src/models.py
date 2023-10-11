@@ -26,6 +26,16 @@ class Visibility(Enum):
     PROTECTED = 2,
 
 
+class LinkType(Enum):
+    """
+    Enum class to represent the type of a link.
+    """
+    EXTENSION = 0,
+    COMPOSITION = 1,
+    AGGREGATION = 2,
+    NORMAL = 3
+
+
 @dataclass
 class Variable:
     """
@@ -118,3 +128,6 @@ class ClassModel:
         :return: The class variables of the class.
         """
         return self.__class_variables
+
+    def __hash__(self) -> int:
+        return hash(self.__name)
