@@ -11,28 +11,28 @@ class ClassType(Enum):
     """
     Enum class to represent the type of a class.
     """
-    CLASS = 0,
-    ABSTRACT = 1,
-    ENUM = 2,
-    EXCEPTION = 3,
+    CLASS = 0
+    ABSTRACT = 1
+    ENUM = 2
+    EXCEPTION = 3
 
 
 class Visibility(Enum):
     """
     Enum class to represent the visibility of a class.
     """
-    PUBLIC = 0,
-    PRIVATE = 1,
-    PROTECTED = 2,
+    PUBLIC = 0
+    PRIVATE = 1
+    PROTECTED = 2
 
 
 class LinkType(Enum):
     """
     Enum class to represent the type of a link.
     """
-    EXTENSION = 0,
-    COMPOSITION = 1,
-    AGGREGATION = 2,
+    EXTENSION = 0
+    COMPOSITION = 1
+    AGGREGATION = 2
     NORMAL = 3
 
 
