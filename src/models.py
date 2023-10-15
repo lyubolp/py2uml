@@ -63,15 +63,14 @@ class ClassModel:
     """
     def __init__(self, name: str, attributes: Optional[list[Variable]],
                  methods: Optional[list[Method]], class_type: ClassType,
-                 class_methods: Optional[list[Method]], static_methods: Optional[list[Method]],
-                 class_variables: Optional[list[Variable]]):
+                 static_methods: Optional[list[Method]],
+                 abstract_methods: Optional[list[Method]]):
         self.__name = name
         self.__attributes = attributes
         self.__methods = methods
         self.__class_type = class_type
-        self.__class_methods = class_methods
         self.__static_methods = static_methods
-        self.__class_variables = class_variables
+        self.__abstract_methods = abstract_methods
 
     @property
     def name(self) -> str:
@@ -106,14 +105,6 @@ class ClassModel:
         return self.__class_type
 
     @property
-    def class_methods(self) -> Optional[list[Method]]:
-        """
-        Getter for the class methods of the class.
-        :return: The class methods of the class.
-        """
-        return self.__class_methods
-
-    @property
     def static_methods(self) -> Optional[list[Method]]:
         """
         Getter for the static methods of the class.
@@ -122,12 +113,12 @@ class ClassModel:
         return self.__static_methods
 
     @property
-    def class_variables(self) -> Optional[list[Variable]]:
+    def abstract_methods(self) -> Optional[list[Method]]:
         """
-        Getter for the class variables of the class.
-        :return: The class variables of the class.
+        Getter for the abstract methods of the class.
+        :return: The abstract methods of the class.
         """
-        return self.__class_variables
+        return self.__abstract_methods
 
     def __hash__(self) -> int:
         return hash(self.__name)
