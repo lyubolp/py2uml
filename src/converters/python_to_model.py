@@ -1,0 +1,214 @@
+"""
+Module containing the converters which will be used to create the models from the Python code.
+"""
+import re
+
+from enum import Enum
+from re import Pattern
+
+from src.models import ClassModel, ClassType, Method, Variable, Visibility
+
+# Class-related patterns
+class_pattern = re.compile(r'class (.*):')
+class_name_pattern = re.compile(r'class ([a-zA-Z0-9]*).*:')
+class_parents_pattern = re.compile(r'class .*\((.*)\)')
+
+# Attribute-related patterns
+attribute_pattern = re.compile(r'self\.(.*) =')
+attribute_name_pattern = re.compile(r'self\.(_){0,2}(.*) =')
+attribute_type_pattern = re.compile(r'self\..* *: *(.*) =')
+
+# Method-related patterns
+method_pattern = re.compile(r'def .*\(self.*\).*:')
+method_name_pattern = re.compile(r'def (.*)\(self.*')
+
+# Other constants
+PARENT_ABSTRACT_NAME = 'ABC'
+PARENT_ENUM_NAME = 'Enum'
+PARENT_EXCEPTION_NAME = 'Exception'
+
+class MethodType(Enum):
+    """
+    Enum class to represent the type of a method.
+    """
+    METHOD = 0
+    STATIC = 1
+    ABSTRACT = 2
+
+
+def generate_models(file_contents: list[str]) -> list[ClassModel]:
+    """
+    Generate the models from the Python code.
+    :param file_contents: The contents of the Python file.
+    :return: The models.
+    """
+    # TODO - Implement
+
+    classes_contents = split_classes(file_contents)
+
+    return [generate_model(class_content) for class_content in classes_contents]
+
+
+def generate_model(file_content: list[str]) -> ClassModel:
+    """
+    Generate a model from the Python code.
+    :param file_content: The contents of the Python file.
+    :return: The model.
+    """
+
+    class_name = get_class_name(file_content[0])
+    class_attributes = get_class_attirbutes(file_content)
+    methods = parsed_methods if (parsed_methods := get_methods(file_content)) else None
+    class_type = get_class_type(file_content[0])
+
+    static_methods = []
+    abstract_methods = []
+
+
+    return ClassModel(class_name, class_attributes, methods, class_type, static_methods, 
+                      abstract_methods)
+
+# Class-related functions
+def split_classes(file_contents: list[str]) -> list[list[str]]:
+    """
+    Split the file contents into a list of classes.
+    :param file_contents: The contents of the Python file.
+    :return: The list of classes.
+    """
+    indexes_to_split_at = [i for i, line in enumerate(file_contents) if class_pattern.match(line)]
+
+    return [file_contents[indexes_to_split_at[i]:indexes_to_split_at[i+1]]
+            for i in range(len(indexes_to_split_at) - 1)] + [file_contents[indexes_to_split_at[-1]:]]
+
+def get_class_name(content: str) -> str:
+    """
+    Get the name of the class.
+    :param content: The contents of the Python file.
+    :return: The name of the class.
+    """
+    match class_name_pattern.match(content):
+        case re.Match() as match_result:
+            return match_result.group(1)
+        case _:
+            raise ValueError('No class name found')
+
+def get_class_attirbutes(content: list[str]) -> list[Variable]:
+    """
+    Get the attributes of a class
+    :param content: The contents of the Python file.
+    :return: The attributes of the class.
+    """
+
+    raw_attributes = extract_item(content, attribute_pattern)
+
+    return [parse_attribute(raw_attribute) for raw_attribute in raw_attributes]
+
+def parse_attribute(raw_attribute: str) -> Variable:
+    """
+    Parse an attribute from the raw string.
+    :param raw_attribute: The raw string.
+    :return: The attribute.
+    """
+
+    match attribute_name_pattern.match(raw_attribute):
+        case re.Match() as match_result:
+            attribute_name = match_result.group(2)
+        case None:
+            raise ValueError('No attribute name found')
+
+    attribute_visibility = parse_visibility(raw_attribute)
+
+    match attribute_type_pattern.match(raw_attribute):
+        case re.Match() as match_result:
+            attribute_type = match_result.group(1)
+        case None:
+            attribute_type = ''
+
+    return Variable(attribute_name, attribute_visibility, attribute_type)
+
+def get_class_type(content: str) -> ClassType:
+    """
+    Get the type of the class.
+    :param content: The contents of the Python file.
+    :return: The type of the class.
+    """
+    match class_parents_pattern.match(content):
+        case re.Match() as match_result:
+            class_type = match_result.group(1)
+        case None:
+            return ClassType.CLASS
+
+    if PARENT_ABSTRACT_NAME in class_type:
+        return ClassType.ABSTRACT
+    elif PARENT_ENUM_NAME in class_type:
+        return ClassType.ENUM
+    elif PARENT_EXCEPTION_NAME in class_type:
+        return ClassType.EXCEPTION
+    else:
+        return ClassType.CLASS
+
+# Method-related functions
+def get_methods(content: list[str]) -> list[Method]:
+    """
+    Get the methods of a class.
+    :param content: The contents of the Python file.
+    :return: The methods of the class.
+    """
+
+    raw_methods = extract_item(content, method_pattern)
+
+    return [parse_method(raw_method) for raw_method in raw_methods]
+
+def parse_method(raw_method: str) -> Method:
+    """
+    Parse a method from the raw string.
+    :param raw_method: The raw string.
+    :return: The method.
+    """
+
+    match method_name_pattern.match(raw_method):
+        case re.Match() as match_result:
+            method_name = match_result.group(1)
+        case None:
+            method_name = ''
+
+    method_visibility = parse_visibility(raw_method)
+
+    # TODO
+    method_arguments = None
+    method_return_type = None
+
+    return Method(method_name, method_visibility, method_arguments, method_return_type)
+
+def parse_method_type(raw_method: str) -> MethodType:
+    pass
+
+# Utils
+def parse_visibility(raw_attribute) -> Visibility:
+    """
+    Parse the visibility of an attribute.
+    :param raw_attribute: The raw string.
+    :return: The visibility of the attribute.
+    """
+    underscore_count = raw_attribute.count('_')
+
+    if underscore_count == 0:
+        visibility = Visibility.PUBLIC
+    elif underscore_count == 1:
+        visibility = Visibility.PROTECTED
+    else:
+        # Having multiple underscores is valid in python - assume private
+        visibility = Visibility.PRIVATE
+    return visibility
+
+def extract_item(content: list[str], item_pattern: Pattern) -> list[str]:
+    """
+    Extract an item from the raw string.
+    :param raw_item: The raw string.
+    :return: The extracted item.
+    """
+    result = [match_result.group(0)
+                         for line in content
+                         if (match_result := item_pattern.match(line)) is not None]
+
+    return result
