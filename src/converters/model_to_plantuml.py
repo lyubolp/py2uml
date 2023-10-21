@@ -128,4 +128,4 @@ def generate_plantuml_class_method(method: Method) -> str:
         method_arguments = ', '.join([f'{argument.variable_type} {argument.name}'
                                       for argument in method.arguments])
 
-    return f'\t{method_visibility}{method_return_type}{method.name}({method_arguments})'
+    return f'\t{method_visibility}{method.name}({method_arguments}): {method_return_type}'
