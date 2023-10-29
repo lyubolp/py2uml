@@ -32,6 +32,7 @@ CLASS_TYPE_TO_PLANTUML = {
 STATIC_METHOD_TO_PLANTUML = '{static}'
 ABSTRACT_METHOD_TO_PLANTUML = '{abstract}'
 
+
 def generate_platuml_class_diagram(classes: list[ClassModel],
                                    links: Optional[dict[ClassModel,
                                                         list[ClassLink]]]) -> list[str]:
@@ -177,6 +178,7 @@ def generate_plantuml_static_method(method: Method) -> str:
     """
     return STATIC_METHOD_TO_PLANTUML + ' ' + generate_plantuml_class_method(method)
 
+
 def generate_plantuml_abstract_methods(class_model: ClassModel) -> list[str]:
     """
     Generate the PlantUML code for the abstract methods of a class.
@@ -187,6 +189,7 @@ def generate_plantuml_abstract_methods(class_model: ClassModel) -> list[str]:
         return []
 
     return [generate_plantuml_abstract_method(method) for method in class_model.abstract_methods]
+
 
 def generate_plantuml_abstract_method(method: Method) -> str:
     """

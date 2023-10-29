@@ -30,6 +30,7 @@ PARENT_ABSTRACT_NAME = 'ABC'
 PARENT_ENUM_NAME = 'Enum'
 PARENT_EXCEPTION_NAME = 'Exception'
 
+
 class MethodType(Enum):
     """
     Enum class to represent the type of a method.
@@ -64,11 +65,12 @@ def generate_model(file_content: list[str]) -> ClassModel:
     methods = parsed_methods if (parsed_methods := get_methods(file_content)) else None
     class_type = get_class_type(file_content[0])
 
-    static_methods = parsed_static_methods if (parsed_static_methods := get_static_methods(file_content)) else None
-    abstract_methods = parsed_abstract_methods if (parsed_abstract_methods := get_abstract_methods(file_content)) else None
+    static_methods = result if (result := get_static_methods(file_content)) else None
+    abstract_methods = result if (result := get_abstract_methods(file_content)) else None
 
-    return ClassModel(class_name, class_attributes, methods, class_type, static_methods, 
-                      abstract_methods)
+    return ClassModel(class_name, class_attributes, methods, class_type,
+                      static_methods, abstract_methods)
+
 
 # Class-related functions
 def split_classes(file_contents: list[str]) -> list[list[str]]:
@@ -80,7 +82,8 @@ def split_classes(file_contents: list[str]) -> list[list[str]]:
     indexes_to_split_at = [i for i, line in enumerate(file_contents) if class_pattern.match(line)]
 
     return [file_contents[indexes_to_split_at[i]:indexes_to_split_at[i+1]]
-            for i in range(len(indexes_to_split_at) - 1)] + [file_contents[indexes_to_split_at[-1]:]]
+            for i in range(len(indexes_to_split_at)-1)] + [file_contents[indexes_to_split_at[-1]:]]
+
 
 def get_class_name(content: str) -> str:
     """
@@ -94,6 +97,7 @@ def get_class_name(content: str) -> str:
         case _:
             raise ValueError('No class name found')
 
+
 def get_class_attirbutes(content: list[str]) -> list[Variable]:
     """
     Get the attributes of a class
@@ -104,6 +108,7 @@ def get_class_attirbutes(content: list[str]) -> list[Variable]:
     raw_attributes = extract_item(content, attribute_pattern)
 
     return [parse_attribute(raw_attribute) for raw_attribute in raw_attributes]
+
 
 def get_class_type(content: str) -> ClassType:
     """
@@ -119,12 +124,13 @@ def get_class_type(content: str) -> ClassType:
 
     if PARENT_ABSTRACT_NAME in class_type:
         return ClassType.ABSTRACT
-    elif PARENT_ENUM_NAME in class_type:
+    if PARENT_ENUM_NAME in class_type:
         return ClassType.ENUM
-    elif PARENT_EXCEPTION_NAME in class_type:
+    if PARENT_EXCEPTION_NAME in class_type:
         return ClassType.EXCEPTION
-    else:
-        return ClassType.CLASS
+
+    return ClassType.CLASS
+
 
 # Method-related functions
 def get_methods(content: list[str]) -> list[Method]:
@@ -137,6 +143,7 @@ def get_methods(content: list[str]) -> list[Method]:
     raw_methods = extract_item(content, method_pattern)
 
     return [parse_method(raw_method) for raw_method in raw_methods]
+
 
 def parse_method(raw_method: str) -> Method:
     """
@@ -157,6 +164,7 @@ def parse_method(raw_method: str) -> Method:
     method_return_type = return_type if (return_type := parse_return_type(raw_method)) else None
 
     return Method(method_name, method_visibility, method_arguments, method_return_type)
+
 
 def parse_arguments(raw_method: str) -> list[Variable]:
     """
@@ -179,6 +187,7 @@ def parse_arguments(raw_method: str) -> list[Variable]:
 
     return parsed_arguments
 
+
 def parse_return_type(raw_method: str) -> str:
     """
     Parse the return type of a method from the raw string.
@@ -193,6 +202,7 @@ def parse_return_type(raw_method: str) -> str:
 
     return return_type
 
+
 def get_static_methods(content: list[str]) -> list[Method]:
     """
     Get the static methods of a class.
@@ -203,6 +213,7 @@ def get_static_methods(content: list[str]) -> list[Method]:
 
     return [parse_method(raw_method) for raw_method in raw_methods]
 
+
 def get_abstract_methods(content: list[str]) -> list[Method]:
     """
     Get the abstract methods of a class.
@@ -212,6 +223,7 @@ def get_abstract_methods(content: list[str]) -> list[Method]:
     raw_methods = [content[i+1] for i, line in enumerate(content) if ABSTRACT_METHOD_NAME in line]
 
     return [parse_method(raw_method) for raw_method in raw_methods]
+
 
 # Utils
 def parse_visibility(raw_attribute) -> Visibility:
@@ -231,17 +243,18 @@ def parse_visibility(raw_attribute) -> Visibility:
         visibility = Visibility.PRIVATE
     return visibility
 
+
 def extract_item(content: list[str], item_pattern: Pattern) -> list[str]:
     """
     Extract an item from the raw string.
     :param raw_item: The raw string.
     :return: The extracted item.
     """
-    result = [match_result.group(0)
-                         for line in content
-                         if (match_result := item_pattern.match(line)) is not None]
+    result = [match_result.group(0) for line in content
+              if (match_result := item_pattern.match(line)) is not None]
 
     return result
+
 
 def parse_attribute(raw_attribute: str) -> Variable:
     """
