@@ -21,6 +21,9 @@ attribute_type_pattern = re.compile(r'self\..* *: *(.*) =')
 # Method-related patterns
 method_pattern = re.compile(r'def .*\(self.*\).*:')
 method_name_pattern = re.compile(r'def (.*)\(self.*')
+method_return_type_pattern = re.compile(r'def .*\(.*\) ->(.*):')
+STATIC_METHOD_NAME = '@staticmethod'
+ABSTRACT_METHOD_NAME = '@abstractmethod'
 
 # Other constants
 PARENT_ABSTRACT_NAME = 'ABC'
@@ -61,9 +64,8 @@ def generate_model(file_content: list[str]) -> ClassModel:
     methods = parsed_methods if (parsed_methods := get_methods(file_content)) else None
     class_type = get_class_type(file_content[0])
 
-    static_methods = []
-    abstract_methods = []
-
+    static_methods = parsed_static_methods if (parsed_static_methods := get_static_methods(file_content)) else None
+    abstract_methods = parsed_abstract_methods if (parsed_abstract_methods := get_abstract_methods(file_content)) else None
 
     return ClassModel(class_name, class_attributes, methods, class_type, static_methods, 
                       abstract_methods)
@@ -102,29 +104,6 @@ def get_class_attirbutes(content: list[str]) -> list[Variable]:
     raw_attributes = extract_item(content, attribute_pattern)
 
     return [parse_attribute(raw_attribute) for raw_attribute in raw_attributes]
-
-def parse_attribute(raw_attribute: str) -> Variable:
-    """
-    Parse an attribute from the raw string.
-    :param raw_attribute: The raw string.
-    :return: The attribute.
-    """
-
-    match attribute_name_pattern.match(raw_attribute):
-        case re.Match() as match_result:
-            attribute_name = match_result.group(2)
-        case None:
-            raise ValueError('No attribute name found')
-
-    attribute_visibility = parse_visibility(raw_attribute)
-
-    match attribute_type_pattern.match(raw_attribute):
-        case re.Match() as match_result:
-            attribute_type = match_result.group(1)
-        case None:
-            attribute_type = ''
-
-    return Variable(attribute_name, attribute_visibility, attribute_type)
 
 def get_class_type(content: str) -> ClassType:
     """
@@ -174,14 +153,65 @@ def parse_method(raw_method: str) -> Method:
 
     method_visibility = parse_visibility(raw_method)
 
-    # TODO
-    method_arguments = None
-    method_return_type = None
+    method_arguments = arguments if (arguments := parse_arguments(raw_method)) else None
+    method_return_type = return_type if (return_type := parse_return_type(raw_method)) else None
 
     return Method(method_name, method_visibility, method_arguments, method_return_type)
 
-def parse_method_type(raw_method: str) -> MethodType:
-    pass
+def parse_arguments(raw_method: str) -> list[Variable]:
+    """
+    Parse the arguments of a method from the raw string.
+    :param raw_arguments: The raw string.
+    :return: The arguments.
+    """
+    arguments_pattern = re.compile(r'\((.*)\)')
+
+    match arguments_pattern.match(raw_method):
+        case re.Match() as match_result:
+            raw_arguments: str = match_result.group(1)
+        case None:
+            return []
+
+    arguments = raw_arguments.split(',')
+    arguments = [argument.strip() for argument in arguments]
+
+    parsed_arguments = [parse_attribute(argument) for argument in arguments]
+
+    return parsed_arguments
+
+def parse_return_type(raw_method: str) -> str:
+    """
+    Parse the return type of a method from the raw string.
+    :param raw_method: The raw string.
+    :return: The return type.
+    """
+    match method_return_type_pattern.match(raw_method):
+        case re.Match() as match_result:
+            return_type = match_result.group(1).strip()
+        case None:
+            return_type = ''
+
+    return return_type
+
+def get_static_methods(content: list[str]) -> list[Method]:
+    """
+    Get the static methods of a class.
+    :param content: The contents of the Python file.
+    :return: The static methods of the class.
+    """
+    raw_methods = [content[i+1] for i, line in enumerate(content) if STATIC_METHOD_NAME in line]
+
+    return [parse_method(raw_method) for raw_method in raw_methods]
+
+def get_abstract_methods(content: list[str]) -> list[Method]:
+    """
+    Get the abstract methods of a class.
+    :param content: The contents of the Python file.
+    :return: The abstract methods of the class.
+    """
+    raw_methods = [content[i+1] for i, line in enumerate(content) if ABSTRACT_METHOD_NAME in line]
+
+    return [parse_method(raw_method) for raw_method in raw_methods]
 
 # Utils
 def parse_visibility(raw_attribute) -> Visibility:
@@ -212,3 +242,26 @@ def extract_item(content: list[str], item_pattern: Pattern) -> list[str]:
                          if (match_result := item_pattern.match(line)) is not None]
 
     return result
+
+def parse_attribute(raw_attribute: str) -> Variable:
+    """
+    Parse an attribute from the raw string.
+    :param raw_attribute: The raw string.
+    :return: The attribute.
+    """
+
+    match attribute_name_pattern.match(raw_attribute):
+        case re.Match() as match_result:
+            attribute_name = match_result.group(2)
+        case None:
+            raise ValueError('No attribute name found')
+
+    attribute_visibility = parse_visibility(raw_attribute)
+
+    match attribute_type_pattern.match(raw_attribute):
+        case re.Match() as match_result:
+            attribute_type = match_result.group(1)
+        case None:
+            attribute_type = ''
+
+    return Variable(attribute_name, attribute_visibility, attribute_type)
