@@ -84,7 +84,8 @@ class TestGeneratePlantUMLClassMethod(unittest.TestCase):
         The method has public visibility, one argument and no return type.
         """
         # Arrange
-        method = Method('test_method', Visibility.PUBLIC, [Variable('test_variable', Visibility.PUBLIC, 'int')], None)
+        method = Method('test_method', Visibility.PUBLIC,
+                        [Variable('test_variable', Visibility.PUBLIC, 'int')], None)
         expected = '\t+test_method(int test_variable)'
 
         # Act
@@ -109,3 +110,257 @@ class TestGeneratePlantUMLClassMethod(unittest.TestCase):
 
         # Assert
         self.assertEqual(expected, actual)
+
+
+class TestGeneratePlantUMLClassMethods(unittest.TestCase):
+    """
+    Test cases for the generate_plantuml_class_methods function.
+
+    Tests:
+    - Available and missing methods
+    - 0, 1 and 2 methods
+    """
+
+    def test_01_no_methods(self):
+        """
+        Verify that the PlantUML code for the methods is correctly generated.
+        The class has no methods.
+        """
+        # Arrange
+        class_model = ClassModel('test_class', None, None, None, None, None)
+        expected = []
+
+        # Act
+        actual = m2p.generate_plantuml_class_methods(class_model)
+
+        # Assert
+        self.assertEqual(expected, actual)
+
+    def test_02_one_method(self):
+        """
+        Verify that the PlantUML code for the methods is correctly generated.
+        The class has one method.
+        """
+        # Arrange
+        method = Method('test_method', Visibility.PUBLIC, None, None)
+        class_model = ClassModel('test_class', None, [method], None, None, None)
+        expected = ['\t+test_method()']
+
+        # Act
+        actual = m2p.generate_plantuml_class_methods(class_model)
+
+        # Assert
+        self.assertEqual(expected, actual)
+
+    def test_03_two_methods(self):
+        """
+        Verify that the PlantUML code for the methods is correctly generated.
+        The class has two methods.
+        """
+        # Arrange
+        method_1 = Method('test_method_1', Visibility.PUBLIC, None, None)
+        method_2 = Method('test_method_2', Visibility.PUBLIC, None, None)
+        class_model = ClassModel('test_class', None, [method_1, method_2], None, None, None)
+        expected = ['\t+test_method_1()', '\t+test_method_2()']
+
+        # Act
+        actual = m2p.generate_plantuml_class_methods(class_model)
+
+        # Assert
+        self.assertEqual(expected, actual)
+
+
+class TestGeneratePlantUMLClassAttribute(unittest.TestCase):
+    """
+    Test cases for the generate_plantuml_class_attribute function.
+
+    Tests:
+    - Different attribute visibilities
+    """
+    def test_01_private_visibility(self):
+        """
+        Verify that the attribute visibility is correctly converted to PlantUML.
+        The attribute has private visibility.
+        """
+        # Arrange
+        attribute = Variable('test_attribute', Visibility.PRIVATE, 'int')
+        expected = '\t-int test_attribute'
+
+        # Act
+        actual = m2p.generate_plantuml_class_attribute(attribute)
+
+        # Assert
+        self.assertEqual(expected, actual)
+
+    def test_02_protected_visibility(self):
+        """
+        Verify that the attribute visibility is correctly converted to PlantUML.
+        The attribute has protected visibility.
+        """
+        # Arrange
+        attribute = Variable('test_attribute', Visibility.PROTECTED, 'int')
+        expected = '\t#int test_attribute'
+
+        # Act
+        actual = m2p.generate_plantuml_class_attribute(attribute)
+
+        # Assert
+        self.assertEqual(expected, actual)
+
+    def test_03_public_visibility(self):
+        """
+        Verify that the attribute visibility is correctly converted to PlantUML.
+        The attribute has public visibility.
+        """
+        # Arrange
+        attribute = Variable('test_attribute', Visibility.PUBLIC, 'int')
+        expected = '\t+int test_attribute'
+
+        # Act
+        actual = m2p.generate_plantuml_class_attribute(attribute)
+
+        # Assert
+        self.assertEqual(expected, actual)
+
+
+class TestGeneratePlantUMLClassAttributes(unittest.TestCase):
+    """
+    Test cases for the generate_plantuml_class_attributes function.
+
+    Tests:
+    - Available and missing attributes
+    - 0, 1 and 2 attributes
+    """
+
+    def test_01_no_attributes(self):
+        """
+        Verify that the PlantUML code for the attributes is correctly generated.
+        The class has no attributes.
+        """
+        # Arrange
+        class_model = ClassModel('test_class', None, None, None, None, None)
+        expected = []
+
+        # Act
+        actual = m2p.generate_plantuml_class_attributes(class_model)
+
+        # Assert
+        self.assertEqual(expected, actual)
+
+    def test_02_one_attribute(self):
+        """
+        Verify that the PlantUML code for the attributes is correctly generated.
+        The class has one attribute.
+        """
+        # Arrange
+        attribute = Variable('test_attribute', Visibility.PUBLIC, 'int')
+        class_model = ClassModel('test_class', [attribute], None, None, None, None)
+        expected = ['\t+int test_attribute']
+
+        # Act
+        actual = m2p.generate_plantuml_class_attributes(class_model)
+
+        # Assert
+        self.assertEqual(expected, actual)
+
+    def test_03_two_attributes(self):
+        """
+        Verify that the PlantUML code for the attributes is correctly generated.
+        The class has two attributes.
+        """
+        # Arrange
+        attribute_1 = Variable('test_attribute_1', Visibility.PUBLIC, 'int')
+        attribute_2 = Variable('test_attribute_2', Visibility.PUBLIC, 'int')
+        class_model = ClassModel('test_class', [attribute_1, attribute_2], None, None, None, None)
+        expected = ['\t+int test_attribute_1', '\t+int test_attribute_2']
+
+        # Act
+        actual = m2p.generate_plantuml_class_attributes(class_model)
+
+        # Assert
+        self.assertEqual(expected, actual)
+
+
+class TestGeneratePlantUMLLink(unittest.TestCase):
+    """
+    Test case for the generate_plantuml_link function.
+
+    Tests:
+    - Different link types
+    """
+    def test_001_extension(self):
+        """
+        Verify that the PlantUML code for the link is correctly generated.
+        The link is an extension.
+        """
+        # Arrange
+        class_model_1 = ClassModel('test_class_1', None, None, None, None, None)
+        class_model_2 = ClassModel('test_class_2', None, None, None, None, None)
+        link = (LinkType.EXTENSION, class_model_2)
+        expected = 'test_class_1 <|-- test_class_2'
+
+        # Act
+        actual = m2p.generate_plantuml_link(class_model_1, link)
+
+        # Assert
+        self.assertEqual(expected, actual)
+
+    def test_002_composition(self):
+        """
+        Verify that the PlantUML code for the link is correctly generated.
+        The link is a composition.
+        """
+        # Arrange
+        class_model_1 = ClassModel('test_class_1', None, None, None, None, None)
+        class_model_2 = ClassModel('test_class_2', None, None, None, None, None)
+        link = (LinkType.COMPOSITION, class_model_2)
+        expected = 'test_class_1 *-- test_class_2'
+
+        # Act
+        actual = m2p.generate_plantuml_link(class_model_1, link)
+
+        # Assert
+        self.assertEqual(expected, actual)
+
+    def test_003_aggregation(self):
+        """
+        Verify that the PlantUML code for the link is correctly generated.
+        The link is a composition.
+        """
+        # Arrange
+        class_model_1 = ClassModel('test_class_1', None, None, None, None, None)
+        class_model_2 = ClassModel('test_class_2', None, None, None, None, None)
+        link = (LinkType.AGGREGATION, class_model_2)
+        expected = 'test_class_1 o-- test_class_2'
+
+        # Act
+        actual = m2p.generate_plantuml_link(class_model_1, link)
+
+        # Assert
+        self.assertEqual(expected, actual)
+
+    def test_004_normal(self):
+        """
+        Verify that the PlantUML code for the link is correctly generated.
+        The link is a composition.
+        """
+        # Arrange
+        class_model_1 = ClassModel('test_class_1', None, None, None, None, None)
+        class_model_2 = ClassModel('test_class_2', None, None, None, None, None)
+        link = (LinkType.NORMAL, class_model_2)
+        expected = 'test_class_1 -- test_class_2'
+
+        # Act
+        actual = m2p.generate_plantuml_link(class_model_1, link)
+
+        # Assert
+        self.assertEqual(expected, actual)
+
+
+class TestGeneratePlantUMLClass(unittest.TestCase):
+    """
+    Test cases for the generate_plantuml_class function.
+
+    Tests:
+    - Available and missing attributes
+    """
