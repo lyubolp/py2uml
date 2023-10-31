@@ -5,7 +5,7 @@ import unittest
 
 import src.converters.model_to_plantuml as m2p
 
-from src.models import ClassModel, LinkType, Method, Variable, Visibility
+from src.models import ClassModel, ClassType, LinkType, Method, Variable, Visibility
 
 
 class TestGeneratePlantUMLClassMethod(unittest.TestCase):
@@ -363,4 +363,174 @@ class TestGeneratePlantUMLClass(unittest.TestCase):
 
     Tests:
     - Available and missing attributes
+    - Available and missing methods
+    - Available and missing static methods
+    - Available and missing abstract methods
+    - Abstract class
+    - Normal class
+    - Enum
+    - Exception
     """
+    def test_01_no_attributes_no_methods_no_static_methods_no_abstract_methods(self):
+        """
+        Verify that the PlantUML code for the class is correctly generated.
+        The class has no attributes.
+        """
+        # Arrange
+        class_model = ClassModel('test_class', attributes=None, methods=None,
+                                 class_type=ClassType.CLASS, static_methods=None,
+                                 abstract_methods=None)
+        expected = ['class test_class {', '}']
+
+        # Act
+        actual = m2p.generate_plantuml_class(class_model)
+
+        # Assert
+        self.assertEqual(expected, actual)
+
+    def test_02_attributes(self):
+        """
+        Verify that the PlantUML code for the class is correctly generated.
+        The class has attributes.
+        """
+        # Arrange
+        attribute_1 = Variable('test_attribute_1', Visibility.PUBLIC, 'int')
+        attribute_2 = Variable('test_attribute_2', Visibility.PUBLIC, 'str')
+
+        class_model = ClassModel('test_class', attributes=[attribute_1, attribute_2], methods=None,
+                                 class_type=ClassType.CLASS, static_methods=None,
+                                 abstract_methods=None)
+        expected = ['class test_class {',
+                    '\t+int test_attribute_1',
+                    '\t+str test_attribute_2',
+                    '}']
+
+        # Act
+        actual = m2p.generate_plantuml_class(class_model)
+
+        # Assert
+        self.assertEqual(expected, actual)
+
+    def test_03_methods(self):
+        """
+        Verify that the PlantUML code for the class is correctly generated.
+        The class has methods.
+        """
+        # Arrange
+        method_1 = Method('test_method_1', Visibility.PUBLIC, None, None)
+        method_2 = Method('test_method_2', Visibility.PUBLIC, None, None)
+
+        class_model = ClassModel('test_class', attributes=None, methods=[method_1, method_2],
+                                 class_type=ClassType.CLASS, static_methods=None,
+                                 abstract_methods=None)
+        expected = ['class test_class {',
+                    '\t+test_method_1()',
+                    '\t+test_method_2()',
+                    '}']
+
+        # Act
+        actual = m2p.generate_plantuml_class(class_model)
+
+        # Assert
+        self.assertEqual(expected, actual)
+
+    def test_04_static_methods(self):
+        """
+        Verify that the PlantUML code for the class is correctly generated.
+        The class has static methods.
+        """
+        # Arrange
+        method_1 = Method('test_method_1', Visibility.PUBLIC, None, None)
+        method_2 = Method('test_method_2', Visibility.PUBLIC, None, None)
+
+        class_model = ClassModel('test_class', attributes=None, methods=None,
+                                 class_type=ClassType.CLASS, static_methods=[method_1, method_2],
+                                 abstract_methods=None)
+        expected = ['class test_class {',
+                    '\t{static} +test_method_1()',
+                    '\t{static} +test_method_2()',
+                    '}']
+
+        # Act
+        actual = m2p.generate_plantuml_class(class_model)
+
+        # Assert
+        self.assertEqual(expected, actual)
+
+    def test_05_abstract_methods(self):
+        """
+        Verify that the PlantUML code for the class is correctly generated.
+        The class has abstract methods.
+        """
+        # Arrange
+        method_1 = Method('test_method_1', Visibility.PUBLIC, None, None)
+        method_2 = Method('test_method_2', Visibility.PUBLIC, None, None)
+
+        class_model = ClassModel('test_class', attributes=None, methods=None,
+                                 class_type=ClassType.CLASS, static_methods=None,
+                                 abstract_methods=[method_1, method_2])
+        expected = ['abstract class test_class {',
+                    '\t{abstract} +test_method_1()',
+                    '\t{abstract} +test_method_2()',
+                    '}']
+
+        # Act
+        actual = m2p.generate_plantuml_class(class_model)
+
+        # Assert
+        self.assertEqual(expected, actual)
+
+    def test_06_abstract_class(self):
+        """
+        Verify that the PlantUML code for the class is correctly generated.
+        The class is an abstract class.
+        """
+        # Arrange
+        class_model = ClassModel('test_class', attributes=None, methods=None,
+                                 class_type=ClassType.ABSTRACT, static_methods=None,
+                                 abstract_methods=None)
+        expected = ['abstract test_class {', '}']
+
+        # Act
+        actual = m2p.generate_plantuml_class(class_model)
+
+        # Assert
+        self.assertEqual(expected, actual)
+
+    def test_07_enum(self):
+        """
+        Verify that the PlantUML code for the class is correctly generated.
+        The class is an enum.
+        """
+        # Arrange
+        class_model = ClassModel('test_class', attributes=None, methods=None,
+                                 class_type=ClassType.ENUM, static_methods=None,
+                                 abstract_methods=None)
+        expected = ['enum test_class {', '}']
+
+        # Act
+        actual = m2p.generate_plantuml_class(class_model)
+
+        # Assert
+        self.assertEqual(expected, actual)
+
+    def test_08_exception(self):
+        """
+        Verify that the PlantUML code for the class is correctly generated.
+        The class is an exception.
+        """
+        # Arrange
+        class_model = ClassModel('test_class', attributes=None, methods=None,
+                                 class_type=ClassType.EXCEPTION, static_methods=None,
+                                 abstract_methods=None)
+        expected = ['exception test_class {', '}']
+
+        # Act
+        actual = m2p.generate_plantuml_class(class_model)
+
+        # Assert
+        self.assertEqual(expected, actual)
+
+
+class TestGeneratePlantUMLStaticMethod(unittest.TestCase):
+    pass
