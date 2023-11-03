@@ -25,7 +25,7 @@ class TestGeneratePlantUMLClassMethod(unittest.TestCase):
         """
         # Arrange
         method = Method('test_method', Visibility.PRIVATE, None, None)
-        expected = '\t-test_method()'
+        expected = '-test_method()'
 
         # Act
         actual = m2p.generate_plantuml_class_method(method)
@@ -40,7 +40,7 @@ class TestGeneratePlantUMLClassMethod(unittest.TestCase):
         """
         # Arrange
         method = Method('test_method', Visibility.PROTECTED, None, None)
-        expected = '\t#test_method()'
+        expected = '#test_method()'
 
         # Act
         actual = m2p.generate_plantuml_class_method(method)
@@ -55,7 +55,7 @@ class TestGeneratePlantUMLClassMethod(unittest.TestCase):
         """
         # Arrange
         method = Method('test_method', Visibility.PUBLIC, None, None)
-        expected = '\t+test_method()'
+        expected = '+test_method()'
 
         # Act
         actual = m2p.generate_plantuml_class_method(method)
@@ -70,7 +70,7 @@ class TestGeneratePlantUMLClassMethod(unittest.TestCase):
         """
         # Arrange
         method = Method('test_method', Visibility.PUBLIC, None, 'int')
-        expected = '\t+test_method(): int'
+        expected = '+test_method(): int'
 
         # Act
         actual = m2p.generate_plantuml_class_method(method)
@@ -86,7 +86,7 @@ class TestGeneratePlantUMLClassMethod(unittest.TestCase):
         # Arrange
         method = Method('test_method', Visibility.PUBLIC,
                         [Variable('test_variable', Visibility.PUBLIC, 'int')], None)
-        expected = '\t+test_method(int test_variable)'
+        expected = '+test_method(int test_variable)'
 
         # Act
         actual = m2p.generate_plantuml_class_method(method)
@@ -103,7 +103,7 @@ class TestGeneratePlantUMLClassMethod(unittest.TestCase):
         method = Method('test_method', Visibility.PUBLIC,
                         [Variable('test_variable_1', Visibility.PUBLIC, 'int'),
                          Variable('test_variable_2', Visibility.PUBLIC, 'int')], None)
-        expected = '\t+test_method(int test_variable_1, int test_variable_2)'
+        expected = '+test_method(int test_variable_1, int test_variable_2)'
 
         # Act
         actual = m2p.generate_plantuml_class_method(method)
@@ -184,7 +184,7 @@ class TestGeneratePlantUMLClassAttribute(unittest.TestCase):
         """
         # Arrange
         attribute = Variable('test_attribute', Visibility.PRIVATE, 'int')
-        expected = '\t-int test_attribute'
+        expected = '-int test_attribute'
 
         # Act
         actual = m2p.generate_plantuml_class_attribute(attribute)
@@ -199,7 +199,7 @@ class TestGeneratePlantUMLClassAttribute(unittest.TestCase):
         """
         # Arrange
         attribute = Variable('test_attribute', Visibility.PROTECTED, 'int')
-        expected = '\t#int test_attribute'
+        expected = '#int test_attribute'
 
         # Act
         actual = m2p.generate_plantuml_class_attribute(attribute)
@@ -214,7 +214,7 @@ class TestGeneratePlantUMLClassAttribute(unittest.TestCase):
         """
         # Arrange
         attribute = Variable('test_attribute', Visibility.PUBLIC, 'int')
-        expected = '\t+int test_attribute'
+        expected = '+int test_attribute'
 
         # Act
         actual = m2p.generate_plantuml_class_attribute(attribute)
@@ -469,7 +469,7 @@ class TestGeneratePlantUMLClass(unittest.TestCase):
         class_model = ClassModel('test_class', attributes=None, methods=None,
                                  class_type=ClassType.CLASS, static_methods=None,
                                  abstract_methods=[method_1, method_2])
-        expected = ['abstract class test_class {',
+        expected = ['class test_class {',
                     '\t{abstract} +test_method_1()',
                     '\t{abstract} +test_method_2()',
                     '}']
@@ -533,4 +533,160 @@ class TestGeneratePlantUMLClass(unittest.TestCase):
 
 
 class TestGeneratePlantUMLStaticMethod(unittest.TestCase):
-    pass
+    """
+    Test case for the generate_plantuml_static_method function.
+
+    The current implementation relies on the generate_plantuml_class_method function.
+    So we can only do one test case.
+    """
+    def test_01_static_method(self):
+        """
+        Verify that the PlantUML code for the static method is correctly generated.
+        """
+        # Arrange
+        method = Method('test_method', Visibility.PUBLIC, None, None)
+        expected = '{static} +test_method()'
+
+        # Act
+        actual = m2p.generate_plantuml_static_method(method)
+
+        # Assert
+        self.assertEqual(expected, actual)
+
+
+class TestGeneratePlantUMLStaticMethods(unittest.TestCase):
+    """
+    Test cases for the generate_plantuml_static_methods function.
+
+    Tests:
+    - Available and missing static methods
+    - 0, 1 and 2 static methods
+    """
+
+    def test_01_no_static_methods(self):
+        """
+        Verify that the PlantUML code for the static methods is correctly generated.
+        The class has no static methods.
+        """
+        # Arrange
+        class_model = ClassModel('test_class', None, None, None, None, None)
+        expected = []
+
+        # Act
+        actual = m2p.generate_plantuml_static_methods(class_model)
+
+        # Assert
+        self.assertEqual(expected, actual)
+
+    def test_02_one_static_method(self):
+        """
+        Verify that the PlantUML code for the static methods is correctly generated.
+        The class has one static method.
+        """
+        # Arrange
+        method = Method('test_method', Visibility.PUBLIC, None, None)
+        class_model = ClassModel('test_class', None, None, None, [method], None)
+        expected = ['\t{static} +test_method()']
+
+        # Act
+        actual = m2p.generate_plantuml_static_methods(class_model)
+
+        # Assert
+        self.assertEqual(expected, actual)
+
+    def test_03_two_static_methods(self):
+        """
+        Verify that the PlantUML code for the static methods is correctly generated.
+        The class has two static methods.
+        """
+        # Arrange
+        method_1 = Method('test_method_1', Visibility.PUBLIC, None, None)
+        method_2 = Method('test_method_2', Visibility.PUBLIC, None, None)
+        class_model = ClassModel('test_class', None, None, None, [method_1, method_2], None)
+        expected = ['\t{static} +test_method_1()', '\t{static} +test_method_2()']
+
+        # Act
+        actual = m2p.generate_plantuml_static_methods(class_model)
+
+        # Assert
+        self.assertEqual(expected, actual)
+
+
+class TestGeneratePlantUMLAbstractMethod(unittest.TestCase):
+    """
+    Test case for the generate_plantuml_abstract_method function.
+
+    The current implementation relies on the generate_plantuml_class_method function.
+    So we can only do one test case.
+    """
+    def test_01_abstract_method(self):
+        """
+        Verify that the PlantUML code for the abstract method is correctly generated.
+        """
+        # Arrange
+        method = Method('test_method', Visibility.PUBLIC, None, None)
+        expected = '{abstract} +test_method()'
+
+        # Act
+        actual = m2p.generate_plantuml_abstract_method(method)
+
+        # Assert
+        self.assertEqual(expected, actual)
+
+
+class TestGeneratePlantUMLAbstractMethods(unittest.TestCase):
+    """
+    Test cases for the generate_plantuml_abstract_methods function.
+
+    Tests:
+    - Available and missing abstract methods
+    - 0, 1 and 2 abstract methods
+    """
+
+    def test_01_no_abstract_methods(self):
+        """
+        Verify that the PlantUML code for the abstract methods is correctly generated.
+        The class has no abstract methods.
+        """
+        # Arrange
+        class_model = ClassModel('test_class', None, None, None, None, None)
+        expected = []
+
+        # Act
+        actual = m2p.generate_plantuml_abstract_methods(class_model)
+
+        # Assert
+        self.assertEqual(expected, actual)
+
+    def test_02_one_abstract_method(self):
+        """
+        Verify that the PlantUML code for the abstract methods is correctly generated.
+        The class has one abstract method.
+        """
+        # Arrange
+        method = Method('test_method', Visibility.PUBLIC, None, None)
+        class_model = ClassModel('test_class', None, None, None, None, [method])
+        expected = ['\t{abstract} +test_method()']
+
+        # Act
+        actual = m2p.generate_plantuml_abstract_methods(class_model)
+
+        # Assert
+        self.assertEqual(expected, actual)
+
+    def test_03_two_abstract_methods(self):
+        """
+        Verify that the PlantUML code for the abstract methods is correctly generated.
+        The class has two abstract methods.
+        """
+        # Arrange
+        method_1 = Method('test_method_1', Visibility.PUBLIC, None, None)
+        method_2 = Method('test_method_2', Visibility.PUBLIC, None, None)
+        class_model = ClassModel('test_class', None, None, None, None, [method_1, method_2])
+        expected = ['\t{abstract} +test_method_1()', '\t{abstract} +test_method_2()']
+
+        # Act
+        actual = m2p.generate_plantuml_abstract_methods(class_model)
+
+        # Assert
+        self.assertEqual(expected, actual)
