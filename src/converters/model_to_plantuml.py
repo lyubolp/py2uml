@@ -109,7 +109,8 @@ def generate_plantuml_class_attributes(class_model: ClassModel) -> list[str]:
     if class_model.attributes is None:
         return []
 
-    return [generate_plantuml_class_attribute(attribute) for attribute in class_model.attributes]
+    return ['\t' + generate_plantuml_class_attribute(attribute)
+            for attribute in class_model.attributes]
 
 
 def generate_plantuml_class_attribute(attribute: Variable) -> str:
@@ -120,7 +121,7 @@ def generate_plantuml_class_attribute(attribute: Variable) -> str:
     """
     attribute_visibility = VISIBILITY_TO_PLANTUML[attribute.visibility]
 
-    return f'\t{attribute_visibility}{attribute.variable_type} {attribute.name}'
+    return f'{attribute_visibility}{attribute.variable_type} {attribute.name}'
 
 
 def generate_plantuml_class_methods(class_model: ClassModel) -> list[str]:
@@ -132,7 +133,7 @@ def generate_plantuml_class_methods(class_model: ClassModel) -> list[str]:
     if class_model.methods is None:
         return []
 
-    return [generate_plantuml_class_method(method) for method in class_model.methods]
+    return ['\t' + generate_plantuml_class_method(method) for method in class_model.methods]
 
 
 def generate_plantuml_class_method(method: Method) -> str:
@@ -155,7 +156,7 @@ def generate_plantuml_class_method(method: Method) -> str:
     if method_return_type != '':
         items += [': ', method_return_type]
 
-    return '\t' + ''.join(items)
+    return ''.join(items)
 
 
 def generate_plantuml_static_methods(class_model: ClassModel) -> list[str]:
@@ -167,7 +168,7 @@ def generate_plantuml_static_methods(class_model: ClassModel) -> list[str]:
     if class_model.static_methods is None:
         return []
 
-    return [generate_plantuml_static_method(method) for method in class_model.static_methods]
+    return ['\t' + generate_plantuml_static_method(method) for method in class_model.static_methods]
 
 
 def generate_plantuml_static_method(method: Method) -> str:
@@ -188,7 +189,7 @@ def generate_plantuml_abstract_methods(class_model: ClassModel) -> list[str]:
     if class_model.abstract_methods is None:
         return []
 
-    return [generate_plantuml_abstract_method(method) for method in class_model.abstract_methods]
+    return ['\t' + generate_plantuml_abstract_method(method) for method in class_model.abstract_methods]
 
 
 def generate_plantuml_abstract_method(method: Method) -> str:
