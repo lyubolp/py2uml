@@ -46,7 +46,6 @@ def generate_models(file_contents: list[str]) -> list[ClassModel]:
     :param file_contents: The contents of the Python file.
     :return: The models.
     """
-    # TODO - Implement
 
     classes_contents = split_classes(file_contents)
 
@@ -61,7 +60,7 @@ def generate_model(file_content: list[str]) -> ClassModel:
     """
 
     class_name = get_class_name(file_content[0])
-    class_attributes = get_class_attirbutes(file_content)
+    class_attributes = get_class_attributes(file_content)
     methods = parsed_methods if (parsed_methods := get_methods(file_content)) else None
     class_type = get_class_type(file_content[0])
 
@@ -79,10 +78,19 @@ def split_classes(file_contents: list[str]) -> list[list[str]]:
     :param file_contents: The contents of the Python file.
     :return: The list of classes.
     """
-    indexes_to_split_at = [i for i, line in enumerate(file_contents) if class_pattern.match(line)]
 
-    return [file_contents[indexes_to_split_at[i]:indexes_to_split_at[i+1]]
-            for i in range(len(indexes_to_split_at)-1)] + [file_contents[indexes_to_split_at[-1]:]]
+    # Assume classes are defined at the top level
+    indexes_to_split_at = [i for i, line in enumerate(file_contents)
+                           if not (line.startswith(' ') or line.startswith('\t'))]
+
+    if len(indexes_to_split_at) == 0:
+        return []
+
+    zero_indentated_content = [file_contents[indexes_to_split_at[i]:indexes_to_split_at[i+1]]
+                               for i in range(len(indexes_to_split_at)-1)]
+    zero_indentated_content += [file_contents[indexes_to_split_at[-1]:]]
+
+    return [content for content in zero_indentated_content if class_pattern.match(content[0])]
 
 
 def get_class_name(content: str) -> str:
@@ -98,7 +106,7 @@ def get_class_name(content: str) -> str:
             raise ValueError('No class name found')
 
 
-def get_class_attirbutes(content: list[str]) -> list[Variable]:
+def get_class_attributes(content: list[str]) -> list[Variable]:
     """
     Get the attributes of a class
     :param content: The contents of the Python file.
@@ -116,6 +124,7 @@ def get_class_type(content: str) -> ClassType:
     :param content: The contents of the Python file.
     :return: The type of the class.
     """
+    content = content.strip()
     match class_parents_pattern.match(content):
         case re.Match() as match_result:
             class_type = match_result.group(1)
@@ -151,7 +160,7 @@ def parse_method(raw_method: str) -> Method:
     :param raw_method: The raw string.
     :return: The method.
     """
-
+    raw_method = raw_method.strip()
     match method_name_pattern.match(raw_method):
         case re.Match() as match_result:
             method_name = match_result.group(1)
@@ -172,6 +181,7 @@ def parse_arguments(raw_method: str) -> list[Variable]:
     :param raw_arguments: The raw string.
     :return: The arguments.
     """
+    raw_method = raw_method.strip()
     arguments_pattern = re.compile(r'\((.*)\)')
 
     match arguments_pattern.match(raw_method):
@@ -194,6 +204,7 @@ def parse_return_type(raw_method: str) -> str:
     :param raw_method: The raw string.
     :return: The return type.
     """
+    raw_method = raw_method.strip()
     match method_return_type_pattern.match(raw_method):
         case re.Match() as match_result:
             return_type = match_result.group(1).strip()
@@ -263,6 +274,7 @@ def parse_attribute(raw_attribute: str) -> Variable:
     :return: The attribute.
     """
 
+    raw_attribute = raw_attribute.strip()
     match attribute_name_pattern.match(raw_attribute):
         case re.Match() as match_result:
             attribute_name = match_result.group(2)
