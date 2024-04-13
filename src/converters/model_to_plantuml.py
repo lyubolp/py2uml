@@ -168,7 +168,8 @@ def generate_plantuml_static_methods(class_model: ClassModel) -> list[str]:
     if class_model.static_methods is None:
         return []
 
-    return ['\t' + generate_plantuml_static_method(method) for method in class_model.static_methods]
+    return ['\t' + generate_plantuml_static_method(method)
+            for method in class_model.static_methods]
 
 
 def generate_plantuml_static_method(method: Method) -> str:
@@ -189,7 +190,8 @@ def generate_plantuml_abstract_methods(class_model: ClassModel) -> list[str]:
     if class_model.abstract_methods is None:
         return []
 
-    return ['\t' + generate_plantuml_abstract_method(method) for method in class_model.abstract_methods]
+    return ['\t' + generate_plantuml_abstract_method(method)
+            for method in class_model.abstract_methods]
 
 
 def generate_plantuml_abstract_method(method: Method) -> str:
