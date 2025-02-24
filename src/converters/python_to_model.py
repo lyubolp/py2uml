@@ -1,6 +1,7 @@
 """
 Module containing the converters which will be used to create the models from the Python code.
 """
+
 import re
 
 from enum import Enum
@@ -9,32 +10,39 @@ from re import Pattern
 from src.models import ClassModel, ClassType, Method, Variable, Visibility
 
 # Class-related patterns
-class_pattern = re.compile(r'class (.*):')
-class_name_pattern = re.compile(r'class ([a-zA-Z0-9]*).*:')
-class_parents_pattern = re.compile(r'class .*\((.*)\)')
+class_pattern = re.compile(r"class (.*):")
+class_name_pattern = re.compile(r"class ([a-zA-Z0-9]*).*:")
+class_parents_pattern = re.compile(r"class .*\((.*)\)")
 
 # Attribute-related patterns
-attribute_pattern = re.compile(r'self\.(.*) =')
-attribute_name_pattern = re.compile(r'self\.(_){0,2}(.*) =')
-attribute_type_pattern = re.compile(r'self\..* *: *(.*) =')
+attribute_pattern = re.compile(r"self\.(.*) =")
+attribute_name_pattern = re.compile(r"self\.(_){0,2}(.*) =")
+argument_type_pattern = re.compile(r"self\..* *: *(.*) =")
 
 # Method-related patterns
-method_pattern = re.compile(r'def .*\(self.*\).*:')
-method_name_pattern = re.compile(r'def (.*)\(self.*')
-method_return_type_pattern = re.compile(r'def .*\(.*\) ->(.*):')
-STATIC_METHOD_NAME = '@staticmethod'
-ABSTRACT_METHOD_NAME = '@abstractmethod'
+method_pattern = re.compile(r"def .*\(self.*\).*:")
+method_name_pattern = re.compile(r"def (.*)\(self.*")
+method_return_type_pattern = re.compile(r"def .*\(.*\) *-> *(.*).*")
+
+# Argument-related patterns
+# TODO - Consider changing all other variable name captures to this group
+argument_pattern = re.compile(r"([a-zA-Z0-9_-]).*")
+argument_type_pattern = re.compile(r".*: *(.*).*")
+
+STATIC_METHOD_NAME = "@staticmethod"
+ABSTRACT_METHOD_NAME = "@abstractmethod"
 
 # Other constants
-PARENT_ABSTRACT_NAME = 'ABC'
-PARENT_ENUM_NAME = 'Enum'
-PARENT_EXCEPTION_NAME = 'Exception'
+PARENT_ABSTRACT_NAME = "ABC"
+PARENT_ENUM_NAME = "Enum"
+PARENT_EXCEPTION_NAME = "Exception"
 
 
 class MethodType(Enum):
     """
     Enum class to represent the type of a method.
     """
+
     METHOD = 0
     STATIC = 1
     ABSTRACT = 2
@@ -67,8 +75,7 @@ def generate_model(file_content: list[str]) -> ClassModel:
     static_methods = result if (result := get_static_methods(file_content)) else None
     abstract_methods = result if (result := get_abstract_methods(file_content)) else None
 
-    return ClassModel(class_name, class_attributes, methods, class_type,
-                      static_methods, abstract_methods)
+    return ClassModel(class_name, class_attributes, methods, class_type, static_methods, abstract_methods)
 
 
 # Class-related functions
@@ -80,15 +87,17 @@ def split_classes(file_contents: list[str]) -> list[list[str]]:
     """
 
     # Assume classes are defined at the top level
-    indexes_to_split_at = [i for i, line in enumerate(file_contents)
-                           if not (line.startswith(' ') or line.startswith('\t'))]
+    indexes_to_split_at = [
+        i for i, line in enumerate(file_contents) if not (line.startswith(" ") or line.startswith("\t"))
+    ]
 
     if len(indexes_to_split_at) == 0:
         return []
 
-    zero_indentated_content = [file_contents[indexes_to_split_at[i]:indexes_to_split_at[i+1]]
-                               for i in range(len(indexes_to_split_at)-1)]
-    zero_indentated_content += [file_contents[indexes_to_split_at[-1]:]]
+    zero_indentated_content = [
+        file_contents[indexes_to_split_at[i] : indexes_to_split_at[i + 1]] for i in range(len(indexes_to_split_at) - 1)
+    ]
+    zero_indentated_content += [file_contents[indexes_to_split_at[-1] :]]
 
     return [content for content in zero_indentated_content if class_pattern.match(content[0])]
 
@@ -103,7 +112,7 @@ def get_class_name(content: str) -> str:
         case re.Match() as match_result:
             return match_result.group(1)
         case _:
-            raise ValueError('No class name found')
+            raise ValueError("No class name found")
 
 
 def get_class_attributes(content: list[str]) -> list[Variable]:
@@ -165,7 +174,7 @@ def parse_method(raw_method: str) -> Method:
         case re.Match() as match_result:
             method_name = match_result.group(1)
         case None:
-            method_name = ''
+            method_name = ""
 
     method_visibility = parse_visibility(raw_method)
 
@@ -182,7 +191,7 @@ def parse_arguments(raw_method: str) -> list[Variable]:
     :return: The arguments.
     """
     raw_method = raw_method.strip()
-    arguments_pattern = re.compile(r'\((.*)\)')
+    arguments_pattern = re.compile(r".*\((.*)\).*")
 
     match arguments_pattern.match(raw_method):
         case re.Match() as match_result:
@@ -190,10 +199,13 @@ def parse_arguments(raw_method: str) -> list[Variable]:
         case None:
             return []
 
-    arguments = raw_arguments.split(',')
+    if raw_arguments == "":
+        return []
+
+    arguments = raw_arguments.split(",")
     arguments = [argument.strip() for argument in arguments]
 
-    parsed_arguments = [parse_attribute(argument) for argument in arguments]
+    parsed_arguments = [parse_argument(argument) for argument in arguments]
 
     return parsed_arguments
 
@@ -209,7 +221,7 @@ def parse_return_type(raw_method: str) -> str:
         case re.Match() as match_result:
             return_type = match_result.group(1).strip()
         case None:
-            return_type = ''
+            return_type = ""
 
     return return_type
 
@@ -220,7 +232,7 @@ def get_static_methods(content: list[str]) -> list[Method]:
     :param content: The contents of the Python file.
     :return: The static methods of the class.
     """
-    raw_methods = [content[i+1] for i, line in enumerate(content) if STATIC_METHOD_NAME in line]
+    raw_methods = [content[i + 1] for i, line in enumerate(content) if STATIC_METHOD_NAME in line]
 
     return [parse_method(raw_method) for raw_method in raw_methods]
 
@@ -231,7 +243,7 @@ def get_abstract_methods(content: list[str]) -> list[Method]:
     :param content: The contents of the Python file.
     :return: The abstract methods of the class.
     """
-    raw_methods = [content[i+1] for i, line in enumerate(content) if ABSTRACT_METHOD_NAME in line]
+    raw_methods = [content[i + 1] for i, line in enumerate(content) if ABSTRACT_METHOD_NAME in line]
 
     return [parse_method(raw_method) for raw_method in raw_methods]
 
@@ -243,7 +255,7 @@ def parse_visibility(raw_attribute) -> Visibility:
     :param raw_attribute: The raw string.
     :return: The visibility of the attribute.
     """
-    underscore_count = raw_attribute.count('_')
+    underscore_count = raw_attribute.count("_")
 
     if underscore_count == 0:
         visibility = Visibility.PUBLIC
@@ -261,8 +273,9 @@ def extract_item(content: list[str], item_pattern: Pattern) -> list[str]:
     :param raw_item: The raw string.
     :return: The extracted item.
     """
-    result = [match_result.group(0) for line in content
-              if (match_result := item_pattern.match(line)) is not None]
+    result = [
+        match_result.group(0) for line in content if (match_result := item_pattern.match(line.strip())) is not None
+    ]
 
     return result
 
@@ -279,14 +292,37 @@ def parse_attribute(raw_attribute: str) -> Variable:
         case re.Match() as match_result:
             attribute_name = match_result.group(2)
         case None:
-            raise ValueError('No attribute name found')
+            raise ValueError("No attribute name found")
 
     attribute_visibility = parse_visibility(raw_attribute)
 
-    match attribute_type_pattern.match(raw_attribute):
+    match argument_type_pattern.match(raw_attribute):
         case re.Match() as match_result:
             attribute_type = match_result.group(1)
         case None:
-            attribute_type = ''
+            attribute_type = ""
 
     return Variable(attribute_name, attribute_visibility, attribute_type)
+
+
+def parse_argument(raw_argument: str) -> Variable:
+    """
+    Parse an argument fro the raw string
+    :param raw_argument: The raw string.
+    :return: The argument
+    """
+    match argument_pattern.match(raw_argument):
+        case re.Match() as match_result:
+            argument_name = match_result.group(1)
+        case None:
+            raise ValueError("No argument found")
+
+    argument_visibility = parse_visibility(raw_argument)
+
+    match argument_type_pattern.match(raw_argument):
+        case re.Match() as match_result:
+            attribute_type = match_result.group(1)
+        case None:
+            attribute_type = ""
+
+    return Variable(argument_name, argument_visibility, attribute_type)
