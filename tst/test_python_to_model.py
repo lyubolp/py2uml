@@ -651,7 +651,143 @@ class TestGetAbstractMethods(unittest.TestCase):
     Test cases for the get_abstract_methods function
     """
 
-    pass
+    def test_01_zero_abstract_methods_zero_other_methods(self):
+        # Arrange
+        content = ["class Foo:", "\tpass"]
+        expected_methods_count = 0
+
+        # Act
+        actual_methods = p2m.get_abstract_methods(content)
+
+        # Assert
+        self.assertEqual(len(actual_methods), expected_methods_count)
+
+    def test_02_zero_abstract_methods_one_other_methods(self):
+        # Arrange
+        content = ["class Foo:", "\tdef foo(self):", "\t\tpass"]
+        expected_methods_count = 0
+
+        # Act
+        actual_methods = p2m.get_abstract_methods(content)
+
+        # Assert
+        self.assertEqual(len(actual_methods), expected_methods_count)
+
+    def test_03_zero_abstract_methods_two_other_methods(self):
+        # Arrange
+        content = ["class Foo:", "\tdef foo(self):", "\t\tpass", "\tdef bar(self):", "\t\tpass"]
+        expected_methods_count = 0
+
+        # Act
+        actual_methods = p2m.get_abstract_methods(content)
+
+        # Assert
+        self.assertEqual(len(actual_methods), expected_methods_count)
+
+    def test_04_one_abstract_method_zero_other_methods(self):
+        # Arrange
+        content = ["class Foo:", "\t@abstractmethod", "\tdef foo(self):", "\t\tpass"]
+        expected_methods_count = 1
+
+        # Act
+        actual_methods = p2m.get_abstract_methods(content)
+
+        # Assert
+        self.assertEqual(len(actual_methods), expected_methods_count)
+
+    def test_05_one_abstract_method_one_other_method(self):
+        # Arrange
+        content = ["class Foo:", "\t@abstractmethod", "\tdef foo(self):", "\t\tpass", "\tdef bar(self):", "\t\tpass"]
+        expected_methods_count = 1
+
+        # Act
+        actual_methods = p2m.get_abstract_methods(content)
+
+        # Assert
+        self.assertEqual(len(actual_methods), expected_methods_count)
+
+    def test_06_one_abstract_method_two_other_methods(self):
+        # Arrange
+        content = [
+            "class Foo:",
+            "\t@abstractmethod",
+            "\tdef foo(self):",
+            "\t\tpass",
+            "\tdef bar(self):",
+            "\t\tpass",
+            "\tdef baz(self):",
+            "\t\tpass",
+        ]
+        expected_methods_count = 1
+
+        # Act
+        actual_methods = p2m.get_abstract_methods(content)
+
+        # Assert
+        self.assertEqual(len(actual_methods), expected_methods_count)
+
+    def test_07_two_abstract_methods_zero_other_methods(self):
+        # Arrange
+        content = [
+            "class Foo:",
+            "\t@abstractmethod",
+            "\tdef foo(self):",
+            "\t\tpass",
+            "\t@abstractmethod",
+            "\tdef bar(self):",
+            "\t\tpass",
+        ]
+        expected_methods_count = 2
+
+        # Act
+        actual_methods = p2m.get_abstract_methods(content)
+
+        # Assert
+        self.assertEqual(len(actual_methods), expected_methods_count)
+
+    def test_08_two_abstract_methods_one_other_method(self):
+        # Arrange
+        content = [
+            "class Foo:",
+            "\t@abstractmethod",
+            "\tdef foo(self):",
+            "\t\tpass",
+            "\t@abstractmethod",
+            "\tdef bar(self):",
+            "\t\tpass",
+            "\tdef baz(self):",
+            "\t\tpass",
+        ]
+        expected_methods_count = 2
+
+        # Act
+        actual_methods = p2m.get_abstract_methods(content)
+
+        # Assert
+        self.assertEqual(len(actual_methods), expected_methods_count)
+
+    def test_09_two_abstract_methods_two_other_methods(self):
+        # Arrange
+        content = [
+            "class Foo:",
+            "\t@abstractmethod",
+            "\tdef foo(self):",
+            "\t\tpass",
+            "\t@abstractmethod",
+            "\tdef bar(self):",
+            "\t\tpass",
+            "\tdef baz(self):",
+            "\t\tpass",
+            "\tdef qux(self):",
+            "\t\tpass",
+        ]
+        expected_methods_count = 2
+
+        # Act
+        actual_methods = p2m.get_abstract_methods(content)
+
+        # Assert
+        self.assertEqual(len(actual_methods), expected_methods_count)
 
 
 class TestParseVisibilityMethods(unittest.TestCase):
