@@ -22,7 +22,7 @@ argument_type_pattern = re.compile(r"self\..* *: *(.*) =")
 # Method-related patterns
 method_pattern = re.compile(r"def .*\(self.*\).*:")
 method_name_pattern = re.compile(r"def (.*)\(self.*")
-method_return_type_pattern = re.compile(r"def .*\(.*\) *-> *(.*).*")
+method_return_type_pattern = re.compile(r"def .*\(.*\) *-> *([a-zA-Z0-9_-]*).*")
 
 # Argument-related patterns
 # TODO - Consider changing all other variable name captures to this group
