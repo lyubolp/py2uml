@@ -507,7 +507,143 @@ class TestGetStaticMethods(unittest.TestCase):
     Test cases for the get_static_methods function
     """
 
-    pass
+    def test_01_zero_static_methods_zero_other_methods(self):
+        # Arrange
+        content = ["class Foo:", "\tpass"]
+        expected_methods_count = 0
+
+        # Act
+        actual_methods = p2m.get_static_methods(content)
+
+        # Assert
+        self.assertEqual(len(actual_methods), expected_methods_count)
+
+    def test_02_zero_static_methods_one_other_methods(self):
+        # Arrange
+        content = ["class Foo:", "\tdef foo(self):", "\t\tpass"]
+        expected_methods_count = 0
+
+        # Act
+        actual_methods = p2m.get_static_methods(content)
+
+        # Assert
+        self.assertEqual(len(actual_methods), expected_methods_count)
+
+    def test_03_zero_static_methods_two_other_methods(self):
+        # Arrange
+        content = ["class Foo:", "\tdef foo(self):", "\t\tpass", "\tdef bar(self):", "\t\tpass"]
+        expected_methods_count = 0
+
+        # Act
+        actual_methods = p2m.get_static_methods(content)
+
+        # Assert
+        self.assertEqual(len(actual_methods), expected_methods_count)
+
+    def test_04_one_static_method_zero_other_methods(self):
+        # Arrange
+        content = ["class Foo:", "\t@staticmethod", "\tdef foo():", "\t\tpass"]
+        expected_methods_count = 1
+
+        # Act
+        actual_methods = p2m.get_static_methods(content)
+
+        # Assert
+        self.assertEqual(len(actual_methods), expected_methods_count)
+
+    def test_05_one_static_method_one_other_method(self):
+        # Arrange
+        content = ["class Foo:", "\t@staticmethod", "\tdef foo():", "\t\tpass", "\tdef bar(self):", "\t\tpass"]
+        expected_methods_count = 1
+
+        # Act
+        actual_methods = p2m.get_static_methods(content)
+
+        # Assert
+        self.assertEqual(len(actual_methods), expected_methods_count)
+
+    def test_06_one_static_method_two_other_methods(self):
+        # Arrange
+        content = [
+            "class Foo:",
+            "\t@staticmethod",
+            "\tdef foo():",
+            "\t\tpass",
+            "\tdef bar(self):",
+            "\t\tpass",
+            "\tdef baz(self):",
+            "\t\tpass",
+        ]
+        expected_methods_count = 1
+
+        # Act
+        actual_methods = p2m.get_static_methods(content)
+
+        # Assert
+        self.assertEqual(len(actual_methods), expected_methods_count)
+
+    def test_07_two_static_methods_zero_other_methods(self):
+        # Arrange
+        content = [
+            "class Foo:",
+            "\t@staticmethod",
+            "\tdef foo():",
+            "\t\tpass",
+            "\t@staticmethod",
+            "\tdef bar():",
+            "\t\tpass",
+        ]
+        expected_methods_count = 2
+
+        # Act
+        actual_methods = p2m.get_static_methods(content)
+
+        # Assert
+        self.assertEqual(len(actual_methods), expected_methods_count)
+
+    def test_08_two_static_methods_one_other_method(self):
+        # Arrange
+        content = [
+            "class Foo:",
+            "\t@staticmethod",
+            "\tdef foo():",
+            "\t\tpass",
+            "\t@staticmethod",
+            "\tdef bar():",
+            "\t\tpass",
+            "\tdef baz(self):",
+            "\t\tpass",
+        ]
+        expected_methods_count = 2
+
+        # Act
+        actual_methods = p2m.get_static_methods(content)
+
+        # Assert
+        self.assertEqual(len(actual_methods), expected_methods_count)
+
+    def test_09_two_static_methods_two_other_methods(self):
+        # Arrange
+        content = [
+            "class Foo:",
+            "\t@staticmethod",
+            "\tdef foo():",
+            "\t\tpass",
+            "\t@staticmethod",
+            "\tdef bar():",
+            "\t\tpass",
+            "\tdef baz(self):",
+            "\t\tpass",
+            "\tdef qux(self):",
+            "\t\tpass",
+        ]
+        expected_methods_count = 2
+
+        # Act
+        actual_methods = p2m.get_static_methods(content)
+
+        # Assert
+        self.assertEqual(len(actual_methods), expected_methods_count)
 
 
 class TestGetAbstractMethods(unittest.TestCase):
