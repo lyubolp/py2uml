@@ -479,7 +479,27 @@ class TestParseReturnType(unittest.TestCase):
     Test cases for the parse_return_type function
     """
 
-    pass
+    def test_01_return_type(self):
+        # Arrange
+        expected_return_type = "int"
+        raw_method = f"def foo(self) -> {expected_return_type}:"
+
+        # Act
+        actual_return_type = p2m.parse_return_type(raw_method)
+
+        # Assert
+        self.assertEqual(actual_return_type, expected_return_type)
+
+    def test_02_no_return_type(self):
+        # Arrange
+        raw_method = "def foo(self):"
+        expected_return_type = ""
+
+        # Act
+        actual_return_type = p2m.parse_return_type(raw_method)
+
+        # Assert
+        self.assertEqual(actual_return_type, expected_return_type)
 
 
 class TestGetStaticMethods(unittest.TestCase):
