@@ -227,90 +227,98 @@ class TestGetClassType(unittest.TestCase):
     """
 
     def test_01_no_parent_class(self):
+        """
+        Verify that get_class_type returns CLASS when there is no parent class
+        """
         # Arrange
         content = "class Foo:"
         expected_class_type = p2m.ClassType.CLASS
-
         # Act
         actual_class_type = p2m.get_class_type(content)
-
         # Assert
         self.assertEqual(actual_class_type, expected_class_type)
 
     def test_02_parent_normal_class(self):
+        """
+        Verify that get_class_type returns CLASS when the parent class is a normal class
+        """
         # Arrange
         content = "class Foo(Bar):"
         expected_class_type = p2m.ClassType.CLASS
-
         # Act
         actual_class_type = p2m.get_class_type(content)
-
         # Assert
         self.assertEqual(actual_class_type, expected_class_type)
 
     def test_03_parent_abstract(self):
+        """
+        Verify that get_class_type returns ABSTRACT when the parent class is ABC
+        """
         # Arrange
         content = "class Foo(ABC):"
         expected_class_type = p2m.ClassType.ABSTRACT
-
         # Act
         actual_class_type = p2m.get_class_type(content)
-
         # Assert
         self.assertEqual(actual_class_type, expected_class_type)
 
     def test_04_parent_enum(self):
+        """
+        Verify that get_class_type returns ENUM when the parent class is Enum
+        """
         # Arrange
         content = "class Foo(Enum):"
         expected_class_type = p2m.ClassType.ENUM
-
         # Act
         actual_class_type = p2m.get_class_type(content)
-
         # Assert
         self.assertEqual(actual_class_type, expected_class_type)
 
     def test_05_parent_exception(self):
+        """
+        Verify that get_class_type returns EXCEPTION when the parent class is Exception
+        """
         # Arrange
         content = "class Foo(Exception):"
         expected_class_type = p2m.ClassType.EXCEPTION
-
         # Act
         actual_class_type = p2m.get_class_type(content)
-
         # Assert
         self.assertEqual(actual_class_type, expected_class_type)
 
     def test_06_no_parent_but_with_parenthesis(self):
+        """
+        Verify that get_class_type returns CLASS when there is no parent class but with parenthesis
+        """
         # Arrange
         content = "class Foo():"
         expected_class_type = p2m.ClassType.CLASS
-
         # Act
         actual_class_type = p2m.get_class_type(content)
-
         # Assert
         self.assertEqual(actual_class_type, expected_class_type)
 
     def test_07_parent_abstract_full_import(self):
+        """
+        Verify that get_class_type returns ABSTRACT when the parent class is abc.ABC
+        """
         # Arrange
         content = "class Foo(abc.ABC):"
         expected_class_type = p2m.ClassType.ABSTRACT
-
         # Act
         actual_class_type = p2m.get_class_type(content)
-
         # Assert
         self.assertEqual(actual_class_type, expected_class_type)
 
     def test_08_parent_enum_full_import(self):
+        """
+        Verify that get_class_type returns ENUM when the parent class is enum.Enum
+        """
         # Arrange
         content = "class Foo(enum.Enum):"
         expected_class_type = p2m.ClassType.ENUM
-
         # Act
         actual_class_type = p2m.get_class_type(content)
-
         # Assert
         self.assertEqual(actual_class_type, expected_class_type)
 
@@ -795,15 +803,11 @@ class TestParseVisibilityMethods(unittest.TestCase):
     Test cases for the parse_visibility function
     """
 
-    pass
-
 
 class TestExtractItemMethods(unittest.TestCase):
     """
     Test cases for the extract_item function
     """
-
-    pass
 
 
 class TestParseAttributeMethods(unittest.TestCase):
@@ -811,20 +815,14 @@ class TestParseAttributeMethods(unittest.TestCase):
     Test cases for the parse_attribute function
     """
 
-    pass
-
 
 class TestGenerateModelsMethods(unittest.TestCase):
     """
     Test cases for the generate_models function
     """
 
-    pass
-
 
 class TestGenerateModelMethods(unittest.TestCase):
     """
     Test cases for the generate_model function
     """
-
-    pass
