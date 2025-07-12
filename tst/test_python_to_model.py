@@ -3,6 +3,7 @@ Module containing the tests for the python_to_model module.
 """
 
 import unittest
+from unittest.mock import MagicMock, patch
 
 import src.converters.python_to_model as p2m
 
@@ -127,6 +128,35 @@ class TestSplitClasses(unittest.TestCase):
         # Assert
         self.assertEqual(len(result), 0)
 
+    def test_08_class_with_content(self):
+        """
+        Verify that split_classes returns a list containing a single element
+            when the file contains a class with content
+        """
+        # Arrange
+        file_contents = [
+            "class TestClass:",
+            "    def __init__(self):",
+            "        self.attribute = 5",
+            "",
+            "    def method(self):",
+            "        return self.attribute",
+        ]
+        expected_file_contents = [
+            "class TestClass:",
+            "    def __init__(self):",
+            "        self.attribute = 5",
+            "    def method(self):",
+            "        return self.attribute",
+        ]
+
+        # Act
+        result = p2m.split_classes(file_contents)
+
+        # Assert
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0], expected_file_contents)
+
 
 class TestGetClassName(unittest.TestCase):
     """
@@ -219,6 +249,29 @@ class TestGetClassAttributes(unittest.TestCase):
 
         # Assert
         self.assertEqual(result, [expected_variable])
+
+    def test_03_two_class_attributes(self):
+        """
+        Verify that get_class_attributes returns a list with two attributes when there are two attributes
+        """
+        # Arrange
+        variable_name_1 = "x"
+        variable_name_2 = "y"
+
+        content = [
+            "class TestClass():",
+            "\tdef __init__(self):",
+            f"\t\tself.{variable_name_1} = 5",
+            f"\t\tself.{variable_name_2} = 10",
+        ]
+        expected_variable_1 = Variable(variable_name_1, Visibility.PUBLIC, "")
+        expected_variable_2 = Variable(variable_name_2, Visibility.PUBLIC, "")
+
+        # Act
+        result = p2m.get_class_attributes(content)
+
+        # Assert
+        self.assertEqual(result, [expected_variable_1, expected_variable_2])
 
 
 class TestGetClassType(unittest.TestCase):
@@ -428,10 +481,7 @@ class TestParseMethod(unittest.TestCase):
 class TestParseArguments(unittest.TestCase):
     """
     Test cases for the parse_arguments function
-    4. Two arguments with type
-    5. Two arguments without type
-    6. One argument with return type
-    7. One argument without return type
+
     """
 
     def test_01_parse_arguments_zero_arguments(self):
@@ -470,10 +520,25 @@ class TestParseArguments(unittest.TestCase):
 
     def test_04_parse_arguments_two_arguments_with_type(self):
         # Arrange
-        variable_a = Variable("a", Visibility.PUBLIC, "")
+        variable_a = Variable("a", Visibility.PUBLIC, "str")
         variable_b = Variable("b", Visibility.PUBLIC, "int")
         expected_arguments = [variable_a, variable_b]
-        raw_method = f"def foo({variable_a.name}, {variable_b.name}: {variable_b.variable_type})"
+        raw_method = (
+            f"def foo({variable_a.name}: {variable_a.variable_type}, {variable_b.name}: {variable_b.variable_type})"
+        )
+
+        # Act
+        actual_arguments = p2m.parse_arguments(raw_method)
+
+        # Assert
+        self.assertEqual(actual_arguments, expected_arguments)
+
+    def test_05_parse_arguments_two_arguments_without_type(self):
+        # Arrange
+        variable_a = Variable("a", Visibility.PUBLIC, "")
+        variable_b = Variable("b", Visibility.PUBLIC, "")
+        expected_arguments = [variable_a, variable_b]
+        raw_method = f"def foo({variable_a.name}, {variable_b.name})"
 
         # Act
         actual_arguments = p2m.parse_arguments(raw_method)
@@ -798,10 +863,62 @@ class TestGetAbstractMethods(unittest.TestCase):
         self.assertEqual(len(actual_methods), expected_methods_count)
 
 
-class TestParseVisibilityMethods(unittest.TestCase):
+class TestParseVisibility(unittest.TestCase):
     """
     Test cases for the parse_visibility function
     """
+
+    def test_01_public_visibility(self):
+        """
+        Verify that parse_visibility returns PUBLIC when the visibility is public
+        """
+        # Arrange
+        content = "self.attribute = value"
+
+        # Act
+        result = p2m.parse_visibility(content)
+
+        # Assert
+        self.assertEqual(result, Visibility.PUBLIC)
+
+    def test_02_protected_visibility(self):
+        """
+        Verify that parse_visibility returns PROTECTED when the visibility is protected
+        """
+        # Arrange
+        content = "self._attribute = value"
+
+        # Act
+        result = p2m.parse_visibility(content)
+
+        # Assert
+        self.assertEqual(result, Visibility.PROTECTED)
+
+    def test_03_private_visibility(self):
+        """
+        Verify that parse_visibility returns PRIVATE when the visibility is private
+        """
+        # Arrange
+        content = "self.__attribute = value"
+
+        # Act
+        result = p2m.parse_visibility(content)
+
+        # Assert
+        self.assertEqual(result, Visibility.PRIVATE)
+
+    def test_04_normal_variable(self):
+        """
+        Verify that parse_visibility returns PUBLIC when the variable is a normal variable
+        """
+        # Arrange
+        content = "attribute = value"
+
+        # Act
+        result = p2m.parse_visibility(content)
+
+        # Assert
+        self.assertEqual(result, Visibility.PUBLIC)
 
 
 class TestExtractItemMethods(unittest.TestCase):
@@ -810,10 +927,94 @@ class TestExtractItemMethods(unittest.TestCase):
     """
 
 
-class TestParseAttributeMethods(unittest.TestCase):
+class TestParseAttribute(unittest.TestCase):
     """
-    Test cases for the parse_attribute function
+    Test cases for the parse_attribute function.
     """
+
+    @classmethod
+    def setUpClass(cls):
+        """
+        Set up the test class
+        """
+        cls.__attribute_name = "attribute_name"
+        cls.__attribute_value = 5
+        cls.__attribute_type = "int"
+
+    def test_01_attribute_name_extracted(self):
+        """
+        Verify that the attribute name is extracted correctly
+        """
+        # Arrange
+        content = f"self.{self.__attribute_name} = {self.__attribute_value}"
+
+        # Act
+        result = p2m.parse_attribute(content)
+
+        # Assert
+        self.assertEqual(result.name, self.__attribute_name)
+
+    def test_02_value_error_raised_when_name_is_not_matched(self):
+        """
+        Verify that a ValueError is raised when the attribute name is not matched
+        """
+        # Arrange
+        content = "Invalid content"
+
+        # Act & Assert
+        with self.assertRaises(ValueError):
+            p2m.parse_attribute(content)
+
+    def test_03_not_an_attribute(self):
+        """
+        Verify that the function raises ValueError when the content is not an attribute
+        """
+        # Arrange
+        content = f"{self.__attribute_name} = {self.__attribute_value}"
+
+        # Act & Assert
+        with self.assertRaises(ValueError):
+            p2m.parse_attribute(content)
+
+    @patch("src.converters.python_to_model.parse_visibility")
+    def test_04_parse_visibility_called(self, mocked_parse_visibility):
+        """
+        Verify that the parse_visibility function is called
+        """
+        # Arrange
+        content = f"self.{self.__attribute_name} = {self.__attribute_value}"
+
+        # Act
+        p2m.parse_attribute(content)
+
+        # Assert
+        mocked_parse_visibility.assert_called_once_with(content)
+
+    def test_05_attribute_type_present_and_extracted(self):
+        """
+        Verify that the attribute type is present and extracted correctly
+        """
+        # Arrange
+        content = f"self.{self.__attribute_name}: {self.__attribute_type} = {self.__attribute_value}"
+
+        # Act
+        result = p2m.parse_attribute(content)
+
+        # Assert
+        self.assertEqual(result.variable_type, self.__attribute_type)
+
+    def test_06_attribute_type_not_present(self):
+        """
+        Verify that the attribute type is not present
+        """
+        # Arrange
+        content = f"self.{self.__attribute_name} = {self.__attribute_value}"
+
+        # Act
+        result = p2m.parse_attribute(content)
+
+        # Assert
+        self.assertEqual(result.variable_type, "")
 
 
 class TestGenerateModelsMethods(unittest.TestCase):
@@ -826,3 +1027,7 @@ class TestGenerateModelMethods(unittest.TestCase):
     """
     Test cases for the generate_model function
     """
+
+
+class TestParseArgument(unittest.TestCase):
+    pass

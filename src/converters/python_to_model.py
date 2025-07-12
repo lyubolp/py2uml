@@ -8,6 +8,7 @@ from enum import Enum
 from re import Pattern
 
 from src.models import ClassModel, ClassType, Method, Variable, Visibility
+from src.string_utils import get_indentation_level
 
 # Class-related patterns
 class_pattern = re.compile(r"class (.*):")
@@ -27,7 +28,7 @@ method_return_type_pattern = re.compile(r"def .*\(.*\) *-> *([a-zA-Z0-9_-]*).*")
 # Argument-related patterns
 # TODO - Consider changing all other variable name captures to this group
 argument_pattern = re.compile(r"([a-zA-Z0-9_-]).*")
-argument_type_pattern = re.compile(r".*: *(.*).*")
+argument_type_pattern = re.compile(r".*: *(.*) +=.*")
 
 STATIC_METHOD_NAME = "@staticmethod"
 ABSTRACT_METHOD_NAME = "@abstractmethod"
@@ -63,6 +64,7 @@ def generate_models(file_contents: list[str]) -> list[ClassModel]:
 def generate_model(file_content: list[str]) -> ClassModel:
     """
     Generate a model from the Python code.
+    The function expects only one class in the file content.
     :param file_content: The contents of the Python file.
     :return: The model.
     """
@@ -85,27 +87,46 @@ def split_classes(file_contents: list[str]) -> list[list[str]]:
     :param file_contents: The contents of the Python file.
     :return: The list of classes.
     """
+    # TODO - Ugly code, maybe fix it at some point
+    # TODO - Nested classes will break this
+    result: list[list[str]] = []
+    current_class: list[str] = []
+    current_indent_level = 0
+    is_class_active = False
 
-    # Assume classes are defined at the top level
-    indexes_to_split_at = [
-        i for i, line in enumerate(file_contents) if not (line.startswith(" ") or line.startswith("\t"))
-    ]
+    for line in file_contents:
+        indent_level = get_indentation_level(line)
+        match class_name_pattern.match(line):
+            case re.Match():
+                if len(current_class) != 0:
+                    result.append(current_class)
+                current_class = [line]
+                current_indent_level = indent_level
+                is_class_active = True
+            case None:
+                if indent_level > current_indent_level and is_class_active:
+                    current_class.append(line)
+                else:
+                    if line.strip() == "":
+                        continue
+                    if len(current_class) != 0:
+                        result.append(current_class)
+                    current_class = []
+                    current_indent_level = 0
+                    is_class_active = False
 
-    if len(indexes_to_split_at) == 0:
-        return []
+    if len(current_class) != 0 and is_class_active:
+        result.append(current_class)
 
-    zero_indentated_content = [
-        file_contents[indexes_to_split_at[i] : indexes_to_split_at[i + 1]] for i in range(len(indexes_to_split_at) - 1)
-    ]
-    zero_indentated_content += [file_contents[indexes_to_split_at[-1] :]]
-
-    return [content for content in zero_indentated_content if class_pattern.match(content[0])]
+    return result
 
 
 def get_class_name(content: str) -> str:
     """
     Get the name of the class.
-    :param content: The contents of the Python file.
+
+    `class TestClass:` -> `TestClass`
+    :param content: Line from the python code containing the class definition.
     :return: The name of the class.
     """
     match class_name_pattern.match(content):
@@ -118,6 +139,7 @@ def get_class_name(content: str) -> str:
 def get_class_attributes(content: list[str]) -> list[Variable]:
     """
     Get the attributes of a class
+    The function expects only one class in the file content.
     :param content: The contents of the Python file.
     :return: The attributes of the class.
     """
@@ -130,6 +152,7 @@ def get_class_attributes(content: list[str]) -> list[Variable]:
 def get_class_type(content: str) -> ClassType:
     """
     Get the type of the class.
+    The function expects only the class definition line.
     :param content: The contents of the Python file.
     :return: The type of the class.
     """
@@ -154,6 +177,7 @@ def get_class_type(content: str) -> ClassType:
 def get_methods(content: list[str]) -> list[Method]:
     """
     Get the methods of a class.
+    The function expects only one class in the file content.
     :param content: The contents of the Python file.
     :return: The methods of the class.
     """
@@ -229,6 +253,7 @@ def parse_return_type(raw_method: str) -> str:
 def get_static_methods(content: list[str]) -> list[Method]:
     """
     Get the static methods of a class.
+    The function expects only one class in the file content.
     :param content: The contents of the Python file.
     :return: The static methods of the class.
     """
@@ -240,6 +265,7 @@ def get_static_methods(content: list[str]) -> list[Method]:
 def get_abstract_methods(content: list[str]) -> list[Method]:
     """
     Get the abstract methods of a class.
+    The function expects only one class in the file content.
     :param content: The contents of the Python file.
     :return: The abstract methods of the class.
     """
@@ -249,9 +275,15 @@ def get_abstract_methods(content: list[str]) -> list[Method]:
 
 
 # Utils
-def parse_visibility(raw_attribute) -> Visibility:
+def parse_visibility(raw_attribute: str) -> Visibility:
     """
     Parse the visibility of an attribute.
+
+    `self.__foo = 1` -> `Visibility.PRIVATE`
+    `self._foo = 1` -> `Visibility.PROTECTED`
+    `self.foo = 1` -> `Visibility.PUBLIC`
+    `a = "asd"` -> `Visibility.PUBLIC`
+
     :param raw_attribute: The raw string.
     :return: The visibility of the attribute.
     """
@@ -280,23 +312,26 @@ def extract_item(content: list[str], item_pattern: Pattern) -> list[str]:
     return result
 
 
-def parse_attribute(raw_attribute: str) -> Variable:
+def parse_attribute(line: str) -> Variable:
     """
     Parse an attribute from the raw string.
-    :param raw_attribute: The raw string.
+
+    `self._attribute_name = 1` -> `Variable("attribute_name", Visibility.PROTECTED, "int")`
+
+    :param line: Line containing an attribute.
     :return: The attribute.
     """
 
-    raw_attribute = raw_attribute.strip()
-    match attribute_name_pattern.match(raw_attribute):
+    line = line.strip()
+    match attribute_name_pattern.match(line):
         case re.Match() as match_result:
             attribute_name = match_result.group(2)
         case None:
             raise ValueError("No attribute name found")
 
-    attribute_visibility = parse_visibility(raw_attribute)
+    attribute_visibility = parse_visibility(line)
 
-    match argument_type_pattern.match(raw_attribute):
+    match argument_type_pattern.match(line):
         case re.Match() as match_result:
             attribute_type = match_result.group(1)
         case None:
@@ -307,7 +342,9 @@ def parse_attribute(raw_attribute: str) -> Variable:
 
 def parse_argument(raw_argument: str) -> Variable:
     """
-    Parse an argument fro the raw string
+    Parse an argument fro the raw string:
+
+    a: int -> Variable("a", Visibility.PUBLIC, "int")
     :param raw_argument: The raw string.
     :return: The argument
     """
