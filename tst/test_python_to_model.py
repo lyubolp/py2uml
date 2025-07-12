@@ -3,7 +3,8 @@ Module containing the tests for the python_to_model module.
 """
 
 import unittest
-from unittest.mock import MagicMock, patch
+import unittest.mock
+from unittest.mock import MagicMock, patch, call
 
 import src.converters.python_to_model as p2m
 
@@ -1017,16 +1018,72 @@ class TestParseAttribute(unittest.TestCase):
         self.assertEqual(result.variable_type, "")
 
 
-class TestGenerateModelsMethods(unittest.TestCase):
+class TestGenerateModels(unittest.TestCase):
     """
     Test cases for the generate_models function
     """
 
+    @patch("src.converters.python_to_model.generate_model")
+    @patch("src.converters.python_to_model.split_classes")
+    def test_01_split_classes_called(self, mocked_split_classes, _):
+        """
+        Verify that the split_classes function is called
+        """
+        # Arrange
+        file_contents = ["class TestClass:", "    pass"]
 
-class TestGenerateModelMethods(unittest.TestCase):
+        # Act
+        p2m.generate_models(file_contents)
+
+        # Assert
+        mocked_split_classes.assert_called_once_with(file_contents)
+
+    @patch("src.converters.python_to_model.generate_model")
+    @patch("src.converters.python_to_model.split_classes")
+    def test_02_generate_model_called(self, mocked_split_classes, mocked_generate_model: MagicMock):
+        """
+        Verify that the generate_model function is called
+        """
+        # Arrange
+        file_contents = ["class TestClass:", "    pass"]
+        sample_classes = ["first", "second", "third"]
+        mocked_split_classes.return_value = sample_classes
+        expected_args_list = [unittest.mock.call(item) for item in sample_classes]
+        # Act
+        p2m.generate_models(file_contents)
+
+        # Assert
+        self.assertEqual(mocked_generate_model.call_count, 3)
+        self.assertEqual(mocked_generate_model.call_args_list, expected_args_list)
+
+
+class TestGenerateModel(unittest.TestCase):
     """
     Test cases for the generate_model function
     """
+
+    __class_content: list[str] = []
+
+    @classmethod
+    def setUpClass(cls):
+        """
+        Set up the test class
+        """
+        cls.__class_content = ["class TestClass:", "    def foo(self):", "        print('Hi')"]
+
+    @patch("src.converters.python_to_model.get_class_name")
+    def test_01_get_class_name_called(self, mocked_get_class_name: MagicMock):
+        """
+        Verify that the get_class_name function is called
+        """
+        # Arrange
+        mocked_get_class_name.return_value = "TestClass"
+
+        # Act
+        p2m.generate_model(self.__class_content)
+
+        # Assert
+        mocked_get_class_name.assert_called_once_with(self.__class_content[0])
 
 
 class TestParseArgument(unittest.TestCase):
