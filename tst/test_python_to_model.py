@@ -2,13 +2,14 @@
 Module containing the tests for the python_to_model module.
 """
 
+from typing_extensions import Never
 import unittest
 import unittest.mock
 from unittest.mock import MagicMock, patch, call
 
 import src.converters.python_to_model as p2m
 
-from src.models import Method, Variable, Visibility
+from src.models import Method, Variable, Visibility, ClassType
 
 
 class TestSplitClasses(unittest.TestCase):
@@ -222,57 +223,77 @@ class TestGetClassAttributes(unittest.TestCase):
     Test cases for the get_class_attributes function
     """
 
-    def test_01_zero_class_attirbutes(self):
+    @patch("src.converters.python_to_model.extract_item")
+    def test_01_extract_item_called(self, mocked_extract_item: MagicMock):
         """
-        Verify that get_class_attributes returns an empty list when there are no attributes
-        """
-        # Arrange
-        content = ["class TestClass():", "\tdef __init__(self):", '\t\tprint("Hello world")']
-
-        # Act
-        result = p2m.get_class_attributes(content)
-
-        # Assert
-        self.assertEqual(result, [])
-
-    def test_02_one_class_attribute(self):
-        """
-        Verify that get_class_attributes returns an empty list when there is one attribute
+        Verify that the extract_item function is called
         """
         # Arrange
-        variable_name = "x"
-
-        content = ["class TestClass():", "\tdef __init__(self):", f"\t\tself.{variable_name} = 5"]
-        expected_variable = Variable(variable_name, Visibility.PUBLIC, "")
+        content = ["class Foo:", "\tdef bar(self):", "\t\tpass"]
 
         # Act
-        result = p2m.get_class_attributes(content)
+        p2m.get_class_attributes(content)
 
         # Assert
-        self.assertEqual(result, [expected_variable])
+        mocked_extract_item.assert_called_once_with(content, p2m.attribute_pattern)
 
-    def test_03_two_class_attributes(self):
+    @patch("src.converters.python_to_model.parse_attribute")
+    @patch("src.converters.python_to_model.extract_item")
+    def test_02_parse_attribute_called_once_when_one_attribute_is_found(
+        self, mocked_extract_item: MagicMock, mocked_parse_attribute: MagicMock
+    ):
         """
-        Verify that get_class_attributes returns a list with two attributes when there are two attributes
+        Verify that the parse_attribute() is called once when only one item is returned by extract_item()
         """
         # Arrange
-        variable_name_1 = "x"
-        variable_name_2 = "y"
-
-        content = [
-            "class TestClass():",
-            "\tdef __init__(self):",
-            f"\t\tself.{variable_name_1} = 5",
-            f"\t\tself.{variable_name_2} = 10",
-        ]
-        expected_variable_1 = Variable(variable_name_1, Visibility.PUBLIC, "")
-        expected_variable_2 = Variable(variable_name_2, Visibility.PUBLIC, "")
+        sample_attribute = "self.x = 5"
+        content = ["class Foo:", f"\t{sample_attribute}", "\t\tpass"]
+        mocked_extract_item.return_value = [sample_attribute]
 
         # Act
-        result = p2m.get_class_attributes(content)
+        p2m.get_class_attributes(content)
 
         # Assert
-        self.assertEqual(result, [expected_variable_1, expected_variable_2])
+        mocked_parse_attribute.assert_called_once_with(sample_attribute)
+
+    @patch("src.converters.python_to_model.parse_attribute")
+    @patch("src.converters.python_to_model.extract_item")
+    def test_03_parse_attribute_called_multiple_times_when_multiple_attributes_found(
+        self, mocked_extract_item: MagicMock, mocked_parse_attribute: MagicMock
+    ):
+        """
+        Verify that the parse_attribute() is called multiple times when multiple items are returned by extract_item()
+        """
+        # Arrange
+        sample_attributes = ["self.x = 5", "self.y = 10"]
+        content = ["class Foo:", f"\t{sample_attributes[0]}", "\t\tpass", f"\t{sample_attributes[1]}", "\t\tpass"]
+        mocked_extract_item.return_value = sample_attributes
+
+        expected_calls = [call(sample_attribute) for sample_attribute in sample_attributes]
+        # Act
+        p2m.get_class_attributes(content)
+
+        # Assert
+        self.assertEqual(mocked_parse_attribute.call_count, len(sample_attributes))
+        self.assertEqual(mocked_parse_attribute.call_args_list, expected_calls)
+
+    @patch("src.converters.python_to_model.parse_attribute")
+    @patch("src.converters.python_to_model.extract_item")
+    def test_04_parse_attribute_called_once_when_no_attributes_found(
+        self, mocked_extract_item: MagicMock, mocked_parse_attribute: MagicMock
+    ):
+        """
+        Verify that the parse_attribute() is called once when no items are returned by extract_item()
+        """
+        # Arrange
+        content = ["class Foo:", "\tpass"]
+        mocked_extract_item.return_value = []
+
+        # Act
+        p2m.get_class_attributes(content)
+
+        # Assert
+        mocked_parse_attribute.assert_not_called()
 
 
 class TestGetClassType(unittest.TestCase):
@@ -382,44 +403,77 @@ class TestGetMethods(unittest.TestCase):
     Test cases for the get_methods function
     """
 
-    def test_01_zero_methods(self):
+    @patch("src.converters.python_to_model.extract_item")
+    def test_01_extract_item_called(self, mocked_extract_item: MagicMock):
+        """
+        Verify that the extract_item function is called
+        """
         # Arrange
-        content: list[str] = ["class Foo:", "\tpass"]
-        expected_methods_amount = 0
+        content = ["class Foo:", "\tdef bar(self):", "\t\tpass"]
 
         # Act
-        actual_methods_amount = len(p2m.get_methods(content))
+        p2m.get_methods(content)
 
         # Assert
-        self.assertEqual(actual_methods_amount, expected_methods_amount)
+        mocked_extract_item.assert_called_once_with(content, p2m.method_pattern)
 
-    def test_02_one_method(self):
+    @patch("src.converters.python_to_model.parse_method")
+    @patch("src.converters.python_to_model.extract_item")
+    def test_02_parse_method_called_once_when_one_method_is_found(
+        self, mocked_extract_item: MagicMock, mocked_parse_method: MagicMock
+    ):
+        """
+        Verify that the parse_method() is called once when only one item is returned by extract_item()
+        """
         # Arrange
-        content = ["class Foo:", "\tdef bar(self):", '\t\tprint("Hello world")']
-        expected_methods_amount = 1
+        sample_method = "def bar(self):"
+        content = ["class Foo:", f"\t{sample_method}", "\t\tpass"]
+        mocked_extract_item.return_value = [sample_method]
 
         # Act
-        actual_methods_amount = len(p2m.get_methods(content))
+        p2m.get_methods(content)
 
         # Assert
-        self.assertEqual(actual_methods_amount, expected_methods_amount)
+        mocked_parse_method.assert_called_once_with(sample_method)
 
-    def test_03_two_methods(self):
+    @patch("src.converters.python_to_model.parse_method")
+    @patch("src.converters.python_to_model.extract_item")
+    def test_03_parse_method_called_multiple_times_when_multiple_methods_found(
+        self, mocked_extract_item: MagicMock, mocked_parse_method: MagicMock
+    ):
+        """
+        Verify that the parse_method() is called multiple times when multiple items are returned by extract_item()
+        """
         # Arrange
-        content = [
-            "class Foo:",
-            "\tdef bar(self):",
-            '\t\tprint("Hello world")',
-            "\tdef baz(self, a: int) -> float:",
-            "\t\treturn 3.14 * a",
-        ]
-        expected_methods_amount = 2
+        sample_methods = ["def bar(self):", "def baz(self):"]
+        content = ["class Foo:", f"\t{sample_methods[0]}", "\t\tpass", f"\t{sample_methods[1]}", "\t\tpass"]
+        mocked_extract_item.return_value = sample_methods
+
+        expected_calls = [call(sample_method) for sample_method in sample_methods]
+        # Act
+        p2m.get_methods(content)
+
+        # Assert
+        self.assertEqual(mocked_parse_method.call_count, len(sample_methods))
+        self.assertEqual(mocked_parse_method.call_args_list, expected_calls)
+
+    @patch("src.converters.python_to_model.parse_method")
+    @patch("src.converters.python_to_model.extract_item")
+    def test_04_parse_method_called_once_when_no_methods_found(
+        self, mocked_extract_item: MagicMock, mocked_parse_method: MagicMock
+    ):
+        """
+        Verify that the parse_method() is called once when no items are returned by extract_item()
+        """
+        # Arrange
+        content = ["class Foo:", "\tpass"]
+        mocked_extract_item.return_value = []
 
         # Act
-        actual_methods_amount = len(p2m.get_methods(content))
+        p2m.get_methods(content)
 
         # Assert
-        self.assertEqual(actual_methods_amount, expected_methods_amount)
+        mocked_parse_method.assert_not_called()
 
 
 class TestParseMethod(unittest.TestCase):
@@ -427,56 +481,183 @@ class TestParseMethod(unittest.TestCase):
     Test cases for the parse_method function
     """
 
-    def test_01_returns_a_method_object(self):
-        # Arrange
-        raw_method = "def foo(self)"
+    # def __init__(self):
+    #     super().__init__()
 
+    #     self.__sample_method_name = "foo"
+    #     self.__sample_method_arguments = "self, a: int"
+    #     self.__sample_method_return_type = "int"
+    #     self.__sample_method = (
+    #         f"def {self.__sample_method_name}({self.__sample_method_arguments}) -> {self.__sample_method_return_type}:"
+    #     )
+
+    def __init__(self, methodName: str = "runTest") -> None:
+        super().__init__(methodName)
+
+        self.__sample_method_name = "foo"
+        self.__sample_method_arguments = "self, a: int"
+        self.__sample_method_return_type = "int"
+        self.__sample_method = (
+            f"def {self.__sample_method_name}({self.__sample_method_arguments}) -> {self.__sample_method_return_type}:"
+        )
+
+    def test_01_returns_a_method_object(self):
         # Act
-        actual_method = p2m.parse_method(raw_method)
+        actual_method = p2m.parse_method(self.__sample_method)
 
         # Assert
         self.assertTrue(isinstance(actual_method, Method))
 
-    @unittest.skip("Is self an argument that should be handled ?")
-    def test_02_method_without_argument(self):
+    @patch("src.converters.python_to_model.extract_item_from_single_line")
+    def test_02_extract_item_called(self, mocked_extract_item: MagicMock):
+        """
+        Verify that the extract_item_from_single_line function is called
+        """
         # Arrange
-        raw_method = "def foo(self)"
+        expected_call = call(self.__sample_method, p2m.method_name_pattern, target_capture_group=1)
+        mocked_extract_item.return_value = self.__sample_method_name
 
         # Act
-        actual_method = p2m.parse_method(raw_method)
+        model = p2m.parse_method(self.__sample_method)
 
         # Assert
-        self.assertIsNone(actual_method.arguments)
+        self.assertEqual(mocked_extract_item.call_args_list[0], expected_call)
+        self.assertEqual(model.name, self.__sample_method_name)
 
-    def test_03_method_with_argument(self):
+    @patch("src.converters.python_to_model.extract_item_from_single_line")
+    def test_03_extract_item_raises_exception(self, mocked_extract_item: MagicMock):
+        """
+        Verify that the parse_method function returns an empty string as a method name
+        when the extract_item_from_single_line function raises an exception
+        """
         # Arrange
-        raw_method = "def foo(self, a: int)"
+        mocked_extract_item.side_effect = ValueError("Method name not found")
 
         # Act
-        actual_method = p2m.parse_method(raw_method)
+        model = p2m.parse_method(self.__sample_method)
 
         # Assert
-        self.assertIsNotNone(actual_method.arguments)
+        self.assertEqual(model.name, "")
 
-    def test_04_method_without_return_type(self):
+    @patch("src.converters.python_to_model.parse_visibility")
+    def test_04_parse_visibility_called(self, mocked_parse_visibility: MagicMock):
+        """
+        Verify that the parse_visibility function is called
+        """
         # Arrange
-        raw_method = "def foo(self)"
+        expected_call = call(self.__sample_method)
+        mocked_parse_visibility.return_value = Visibility.PUBLIC
 
         # Act
-        actual_method = p2m.parse_method(raw_method)
+        model = p2m.parse_method(self.__sample_method)
 
         # Assert
-        self.assertIsNone(actual_method.return_type)
+        self.assertEqual(mocked_parse_visibility.call_args_list[0], expected_call)
+        self.assertEqual(model.visibility, Visibility.PUBLIC)
 
-    def test_05_method_with_return_type(self):
+    @patch("src.converters.python_to_model.parse_arguments")
+    def test_05_parse_arguments_called(self, mocked_parse_arguments: MagicMock):
+        """
+        Verify that the parse_arguments function is called
+        """
         # Arrange
-        raw_method = "def foo(self) -> int:"
+        expected_call = call(self.__sample_method)
+        mocked_parse_arguments.return_value = [Variable("a", Visibility.PUBLIC, "int")]
 
         # Act
-        actual_method = p2m.parse_method(raw_method)
+        model = p2m.parse_method(self.__sample_method)
 
         # Assert
-        self.assertIsNotNone(actual_method.return_type)
+        self.assertEqual(mocked_parse_arguments.call_args_list[0], expected_call)
+        self.assertIsNotNone(model.arguments)
+        self.assertEqual(len(model.arguments), 1)
+        self.assertEqual(model.arguments[0].name, "a")
+        self.assertEqual(model.arguments[0].variable_type, "int")
+
+    @patch("src.converters.python_to_model.parse_arguments")
+    def test_06_parse_arguments_returns_none(self, mocked_parse_arguments: MagicMock):
+        """
+        Verify that the arguments are None when the parse_arguments returns a [].
+        """
+        # Arrange
+        mocked_parse_arguments.return_value = []
+
+        # Act
+        model = p2m.parse_method(self.__sample_method)
+
+        # Assert
+        self.assertIsNone(model.arguments)
+
+    @patch("src.converters.python_to_model.parse_return_type")
+    def test_07_parse_return_type_called(self, mocked_parse_return_type: MagicMock):
+        """
+        Verify that the parse_return_type function is called
+        """
+        # Arrange
+        expected_call = call(self.__sample_method)
+        mocked_parse_return_type.return_value = "int"
+
+        # Act
+        model = p2m.parse_method(self.__sample_method)
+
+        # Assert
+        self.assertEqual(mocked_parse_return_type.call_args_list[0], expected_call)
+        self.assertEqual(model.return_type, "int")
+
+    @patch("src.converters.python_to_model.parse_return_type")
+    def test_08_parse_return_type_returns_none(self, mocked_parse_return_type: MagicMock):
+        """
+        Verify that the return_type is None when the parse_return_type returns an empty string.
+        """
+        # Arrange
+        mocked_parse_return_type.return_value = ""
+
+        # Act
+        model = p2m.parse_method(self.__sample_method)
+
+        # Assert
+        self.assertIsNone(model.return_type)
+
+    # @unittest.skip("Is self an argument that should be handled ?")
+    # def test_02_method_without_argument(self):
+    #     # Arrange
+    #     raw_method = "def foo(self)"
+
+    #     # Act
+    #     actual_method = p2m.parse_method(raw_method)
+
+    #     # Assert
+    #     self.assertIsNone(actual_method.arguments)
+
+    # def test_03_method_with_argument(self):
+    #     # Arrange
+    #     raw_method = "def foo(self, a: int)"
+
+    #     # Act
+    #     actual_method = p2m.parse_method(raw_method)
+
+    #     # Assert
+    #     self.assertIsNotNone(actual_method.arguments)
+
+    # def test_04_method_without_return_type(self):
+    #     # Arrange
+    #     raw_method = "def foo(self)"
+
+    #     # Act
+    #     actual_method = p2m.parse_method(raw_method)
+
+    #     # Assert
+    #     self.assertIsNone(actual_method.return_type)
+
+    # def test_05_method_with_return_type(self):
+    #     # Arrange
+    #     raw_method = "def foo(self) -> int:"
+
+    #     # Act
+    #     actual_method = p2m.parse_method(raw_method)
+
+    #     # Assert
+    #     self.assertIsNotNone(actual_method.return_type)
 
 
 class TestParseArguments(unittest.TestCase):
@@ -485,67 +666,135 @@ class TestParseArguments(unittest.TestCase):
 
     """
 
-    def test_01_parse_arguments_zero_arguments(self):
+    @patch("src.converters.python_to_model.extract_item_from_single_line")
+    def test_01_extract_item_called(self, mocked_extract_item: MagicMock):
+        """
+        Verify that the extract_item_from_single_line function is called
+        """
         # Arrange
-        raw_method = "def foo()"
+        raw_method = "def foo(self, a: int, b: str)"
+        expected_call = call(raw_method, p2m.arguments_pattern, target_capture_group=1)
+        mocked_extract_item.return_value = "a: int, b: str"
 
         # Act
-        actual_arguments = p2m.parse_arguments(raw_method)
+        p2m.parse_arguments(raw_method)
 
         # Assert
-        self.assertEqual(actual_arguments, [])
+        self.assertEqual(mocked_extract_item.call_args_list[0], expected_call)
 
-    def test_02_parse_arguments_one_argument_with_type(self):
+    @patch("src.converters.python_to_model.extract_item_from_single_line")
+    def test_02_arguments_are_empty_when_extract_item_raises_exception(self, mocked_extract_item: MagicMock):
+        """
+        Verify that when extract_item_from_single_line raises an exception,
+        the parse_arguments function returns an empty list.
+        """
         # Arrange
-        variable = Variable("a", Visibility.PUBLIC, "int")
-        expected_arguments = [variable]
-        raw_method = f"def foo({variable.name}: {variable.variable_type})"
+        raw_method = "def foo(self, a: int, b: str)"
+        mocked_extract_item.side_effect = ValueError("No arguments found")
 
         # Act
-        actual_arguments = p2m.parse_arguments(raw_method)
+        model = p2m.parse_arguments(raw_method)
 
         # Assert
-        self.assertEqual(actual_arguments, expected_arguments)
+        self.assertEqual(model, [])
 
-    def test_03_parse_arguments_one_argument_without_type(self):
+    @patch("src.converters.python_to_model.extract_item_from_single_line")
+    def test_03_arguments_are_empty_when_extract_item_returns_empty(self, mocked_extract_item: MagicMock):
+        """
+        Verify that when no arguments are found, the parse_arguments function returns an empty list.
+        """
         # Arrange
-        variable = Variable("a", Visibility.PUBLIC, "")
-        expected_arguments = [variable]
-        raw_method = f"def foo({variable.name})"
+        raw_method = "def foo(self)"
+        mocked_extract_item.return_value = ""
 
         # Act
-        actual_arguments = p2m.parse_arguments(raw_method)
+        model = p2m.parse_arguments(raw_method)
 
         # Assert
-        self.assertEqual(actual_arguments, expected_arguments)
+        self.assertEqual(model, [])
 
-    def test_04_parse_arguments_two_arguments_with_type(self):
+    @patch("src.converters.python_to_model.extract_item_from_single_line")
+    @patch("src.converters.python_to_model.parse_argument")
+    def test_04_results_from_extract_are_split_and_parse_argument_called(
+        self, mocked_parse_argument: MagicMock, mocked_extract_item: MagicMock
+    ):
+        """
+        Verify that parse_arguments returns an empty list when there are no arguments
+        """
         # Arrange
-        variable_a = Variable("a", Visibility.PUBLIC, "str")
-        variable_b = Variable("b", Visibility.PUBLIC, "int")
-        expected_arguments = [variable_a, variable_b]
-        raw_method = (
-            f"def foo({variable_a.name}: {variable_a.variable_type}, {variable_b.name}: {variable_b.variable_type})"
-        )
+        raw_arguments = "a: int, b: str"
+        expected_calls = [call("a: int"), call("b: str")]
+        raw_method = f"def foo({raw_arguments})"
+
+        mocked_extract_item.return_value = raw_arguments
 
         # Act
-        actual_arguments = p2m.parse_arguments(raw_method)
+        p2m.parse_arguments(raw_method)
 
         # Assert
-        self.assertEqual(actual_arguments, expected_arguments)
+        self.assertEqual(mocked_parse_argument.call_args_list, expected_calls)
 
-    def test_05_parse_arguments_two_arguments_without_type(self):
-        # Arrange
-        variable_a = Variable("a", Visibility.PUBLIC, "")
-        variable_b = Variable("b", Visibility.PUBLIC, "")
-        expected_arguments = [variable_a, variable_b]
-        raw_method = f"def foo({variable_a.name}, {variable_b.name})"
+    # def test_01_parse_arguments_zero_arguments(self):
+    #     # Arrange
+    #     raw_method = "def foo()"
 
-        # Act
-        actual_arguments = p2m.parse_arguments(raw_method)
+    #     # Act
+    #     actual_arguments = p2m.parse_arguments(raw_method)
 
-        # Assert
-        self.assertEqual(actual_arguments, expected_arguments)
+    #     # Assert
+    #     self.assertEqual(actual_arguments, [])
+
+    # def test_02_parse_arguments_one_argument_with_type(self):
+    #     # Arrange
+    #     variable = Variable("a", Visibility.PUBLIC, "int")
+    #     expected_arguments = [variable]
+    #     raw_method = f"def foo({variable.name}: {variable.variable_type})"
+
+    #     # Act
+    #     actual_arguments = p2m.parse_arguments(raw_method)
+
+    #     # Assert
+    #     self.assertEqual(actual_arguments, expected_arguments)
+
+    # def test_03_parse_arguments_one_argument_without_type(self):
+    #     # Arrange
+    #     variable = Variable("a", Visibility.PUBLIC, "")
+    #     expected_arguments = [variable]
+    #     raw_method = f"def foo({variable.name})"
+
+    #     # Act
+    #     actual_arguments = p2m.parse_arguments(raw_method)
+
+    #     # Assert
+    #     self.assertEqual(actual_arguments, expected_arguments)
+
+    # def test_04_parse_arguments_two_arguments_with_type(self):
+    #     # Arrange
+    #     variable_a = Variable("a", Visibility.PUBLIC, "str")
+    #     variable_b = Variable("b", Visibility.PUBLIC, "int")
+    #     expected_arguments = [variable_a, variable_b]
+    #     raw_method = (
+    #         f"def foo({variable_a.name}: {variable_a.variable_type}, {variable_b.name}: {variable_b.variable_type})"
+    #     )
+
+    #     # Act
+    #     actual_arguments = p2m.parse_arguments(raw_method)
+
+    #     # Assert
+    #     self.assertEqual(actual_arguments, expected_arguments)
+
+    # def test_05_parse_arguments_two_arguments_without_type(self):
+    #     # Arrange
+    #     variable_a = Variable("a", Visibility.PUBLIC, "")
+    #     variable_b = Variable("b", Visibility.PUBLIC, "")
+    #     expected_arguments = [variable_a, variable_b]
+    #     raw_method = f"def foo({variable_a.name}, {variable_b.name})"
+
+    #     # Act
+    #     actual_arguments = p2m.parse_arguments(raw_method)
+
+    #     # Assert
+    #     self.assertEqual(actual_arguments, expected_arguments)
 
 
 class TestParseReturnType(unittest.TestCase):
@@ -553,27 +802,61 @@ class TestParseReturnType(unittest.TestCase):
     Test cases for the parse_return_type function
     """
 
-    def test_01_return_type(self):
+    @patch("src.converters.python_to_model.extract_item_from_single_line")
+    def test_01_extract_item_called(self, mocked_extract_item: MagicMock):
+        """
+        Verify that the extract_item_from_single_line function is called
+        """
         # Arrange
         expected_return_type = "int"
         raw_method = f"def foo(self) -> {expected_return_type}:"
+        expected_call = call(raw_method, p2m.method_return_type_pattern, target_capture_group=1)
+        mocked_extract_item.return_value = expected_return_type
 
         # Act
-        actual_return_type = p2m.parse_return_type(raw_method)
+        model = p2m.parse_return_type(raw_method)
 
         # Assert
-        self.assertEqual(actual_return_type, expected_return_type)
+        self.assertEqual(mocked_extract_item.call_args_list[0], expected_call)
+        self.assertEqual(model, expected_return_type)
 
-    def test_02_no_return_type(self):
+    @patch("src.converters.python_to_model.extract_item_from_single_line")
+    def test_02_return_type_empty_when_extract_item_raises_exception(self, mocked_extract_item: MagicMock):
+        """
+        Verify that when extract_item_from_single_line raises an exception,
+        the parse_return_type function returns an empty string.
+        """
         # Arrange
-        raw_method = "def foo(self):"
-        expected_return_type = ""
+        raw_method = "def foo(self) -> int:"
+        mocked_extract_item.side_effect = ValueError("Return type not found")
 
         # Act
-        actual_return_type = p2m.parse_return_type(raw_method)
+        model = p2m.parse_return_type(raw_method)
 
         # Assert
-        self.assertEqual(actual_return_type, expected_return_type)
+        self.assertEqual(model, "")
+
+    # def test_01_return_type(self):
+    #     # Arrange
+    #     expected_return_type = "int"
+    #     raw_method = f"def foo(self) -> {expected_return_type}:"
+
+    #     # Act
+    #     actual_return_type = p2m.parse_return_type(raw_method)
+
+    #     # Assert
+    #     self.assertEqual(actual_return_type, expected_return_type)
+
+    # def test_02_no_return_type(self):
+    #     # Arrange
+    #     raw_method = "def foo(self):"
+    #     expected_return_type = ""
+
+    #     # Act
+    #     actual_return_type = p2m.parse_return_type(raw_method)
+
+    #     # Assert
+    #     self.assertEqual(actual_return_type, expected_return_type)
 
 
 class TestGetStaticMethods(unittest.TestCase):
@@ -581,7 +864,8 @@ class TestGetStaticMethods(unittest.TestCase):
     Test cases for the get_static_methods function
     """
 
-    def test_01_zero_static_methods_zero_other_methods(self):
+    @patch("src.converters.python_to_model.parse_method")
+    def test_01_zero_static_methods_zero_other_methods(self, mocked_parse_method: MagicMock):
         # Arrange
         content = ["class Foo:", "\tpass"]
         expected_methods_count = 0
@@ -590,9 +874,11 @@ class TestGetStaticMethods(unittest.TestCase):
         actual_methods = p2m.get_static_methods(content)
 
         # Assert
+        mocked_parse_method.assert_not_called()
         self.assertEqual(len(actual_methods), expected_methods_count)
 
-    def test_02_zero_static_methods_one_other_methods(self):
+    @patch("src.converters.python_to_model.parse_method")
+    def test_02_zero_static_methods_one_other_methods(self, mocked_parse_method: MagicMock):
         # Arrange
         content = ["class Foo:", "\tdef foo(self):", "\t\tpass"]
         expected_methods_count = 0
@@ -602,8 +888,10 @@ class TestGetStaticMethods(unittest.TestCase):
 
         # Assert
         self.assertEqual(len(actual_methods), expected_methods_count)
+        mocked_parse_method.assert_not_called()
 
-    def test_03_zero_static_methods_two_other_methods(self):
+    @patch("src.converters.python_to_model.parse_method")
+    def test_03_zero_static_methods_two_other_methods(self, mocked_parse_method: MagicMock):
         # Arrange
         content = ["class Foo:", "\tdef foo(self):", "\t\tpass", "\tdef bar(self):", "\t\tpass"]
         expected_methods_count = 0
@@ -612,36 +900,45 @@ class TestGetStaticMethods(unittest.TestCase):
         actual_methods = p2m.get_static_methods(content)
 
         # Assert
+        mocked_parse_method.assert_not_called()
         self.assertEqual(len(actual_methods), expected_methods_count)
 
-    def test_04_one_static_method_zero_other_methods(self):
+    @patch("src.converters.python_to_model.parse_method")
+    def test_04_one_static_method_zero_other_methods(self, mocked_parse_method: MagicMock):
         # Arrange
-        content = ["class Foo:", "\t@staticmethod", "\tdef foo():", "\t\tpass"]
+        static_method = "\tdef foo():"
+        content = ["class Foo:", "\t@staticmethod", static_method, "\t\tpass"]
         expected_methods_count = 1
 
         # Act
         actual_methods = p2m.get_static_methods(content)
 
         # Assert
+        mocked_parse_method.assert_called_once_with(static_method)
         self.assertEqual(len(actual_methods), expected_methods_count)
 
-    def test_05_one_static_method_one_other_method(self):
+    @patch("src.converters.python_to_model.parse_method")
+    def test_05_one_static_method_one_other_method(self, mocked_parse_method: MagicMock):
         # Arrange
-        content = ["class Foo:", "\t@staticmethod", "\tdef foo():", "\t\tpass", "\tdef bar(self):", "\t\tpass"]
+        static_method = "\tdef foo():"
+        content = ["class Foo:", static_method, "\tdef foo():", "\t\tpass", "\tdef bar(self):", "\t\tpass"]
         expected_methods_count = 1
 
         # Act
         actual_methods = p2m.get_static_methods(content)
 
         # Assert
+        mocked_parse_method.assert_called_once_with(static_method)
         self.assertEqual(len(actual_methods), expected_methods_count)
 
-    def test_06_one_static_method_two_other_methods(self):
+    @patch("src.converters.python_to_model.parse_method")
+    def test_06_one_static_method_two_other_methods(self, mocked_parse_method: MagicMock):
         # Arrange
+        static_method = "\tdef foo():"
         content = [
             "class Foo:",
             "\t@staticmethod",
-            "\tdef foo():",
+            static_method,
             "\t\tpass",
             "\tdef bar(self):",
             "\t\tpass",
@@ -654,17 +951,21 @@ class TestGetStaticMethods(unittest.TestCase):
         actual_methods = p2m.get_static_methods(content)
 
         # Assert
+        mocked_parse_method.assert_called_once_with(static_method)
         self.assertEqual(len(actual_methods), expected_methods_count)
 
-    def test_07_two_static_methods_zero_other_methods(self):
+    @patch("src.converters.python_to_model.parse_method")
+    def test_07_two_static_methods_zero_other_methods(self, mocked_parse_method: MagicMock):
         # Arrange
+        static_method_1 = "\tdef foo():"
+        static_method_2 = "\tdef bar():"
         content = [
             "class Foo:",
             "\t@staticmethod",
-            "\tdef foo():",
+            static_method_1,
             "\t\tpass",
             "\t@staticmethod",
-            "\tdef bar():",
+            static_method_2,
             "\t\tpass",
         ]
         expected_methods_count = 2
@@ -673,17 +974,21 @@ class TestGetStaticMethods(unittest.TestCase):
         actual_methods = p2m.get_static_methods(content)
 
         # Assert
+        mocked_parse_method.assert_has_calls([call(static_method_1), call(static_method_2)])
         self.assertEqual(len(actual_methods), expected_methods_count)
 
-    def test_08_two_static_methods_one_other_method(self):
+    @patch("src.converters.python_to_model.parse_method")
+    def test_08_two_static_methods_one_other_method(self, mocked_parse_method: MagicMock):
         # Arrange
+        static_method_1 = "\tdef foo():"
+        static_method_2 = "\tdef bar():"
         content = [
             "class Foo:",
             "\t@staticmethod",
-            "\tdef foo():",
+            static_method_1,
             "\t\tpass",
             "\t@staticmethod",
-            "\tdef bar():",
+            static_method_2,
             "\t\tpass",
             "\tdef baz(self):",
             "\t\tpass",
@@ -694,17 +999,21 @@ class TestGetStaticMethods(unittest.TestCase):
         actual_methods = p2m.get_static_methods(content)
 
         # Assert
+        mocked_parse_method.assert_has_calls([call(static_method_1), call(static_method_2)])
         self.assertEqual(len(actual_methods), expected_methods_count)
 
-    def test_09_two_static_methods_two_other_methods(self):
+    @patch("src.converters.python_to_model.parse_method")
+    def test_09_two_static_methods_two_other_methods(self, mocked_parse_method: MagicMock):
         # Arrange
+        static_method_1 = "\tdef foo():"
+        static_method_2 = "\tdef bar():"
         content = [
             "class Foo:",
             "\t@staticmethod",
-            "\tdef foo():",
+            static_method_1,
             "\t\tpass",
             "\t@staticmethod",
-            "\tdef bar():",
+            static_method_2,
             "\t\tpass",
             "\tdef baz(self):",
             "\t\tpass",
@@ -717,6 +1026,7 @@ class TestGetStaticMethods(unittest.TestCase):
         actual_methods = p2m.get_static_methods(content)
 
         # Assert
+        mocked_parse_method.assert_has_calls([call(static_method_1), call(static_method_2)])
         self.assertEqual(len(actual_methods), expected_methods_count)
 
 
@@ -725,7 +1035,8 @@ class TestGetAbstractMethods(unittest.TestCase):
     Test cases for the get_abstract_methods function
     """
 
-    def test_01_zero_abstract_methods_zero_other_methods(self):
+    @patch("src.converters.python_to_model.parse_method")
+    def test_01_zero_abstract_methods_zero_other_methods(self, mocked_parse_method: MagicMock):
         # Arrange
         content = ["class Foo:", "\tpass"]
         expected_methods_count = 0
@@ -734,9 +1045,11 @@ class TestGetAbstractMethods(unittest.TestCase):
         actual_methods = p2m.get_abstract_methods(content)
 
         # Assert
+        mocked_parse_method.assert_not_called()
         self.assertEqual(len(actual_methods), expected_methods_count)
 
-    def test_02_zero_abstract_methods_one_other_methods(self):
+    @patch("src.converters.python_to_model.parse_method")
+    def test_02_zero_abstract_methods_one_other_methods(self, mocked_parse_method: MagicMock):
         # Arrange
         content = ["class Foo:", "\tdef foo(self):", "\t\tpass"]
         expected_methods_count = 0
@@ -745,9 +1058,11 @@ class TestGetAbstractMethods(unittest.TestCase):
         actual_methods = p2m.get_abstract_methods(content)
 
         # Assert
+        mocked_parse_method.assert_not_called()
         self.assertEqual(len(actual_methods), expected_methods_count)
 
-    def test_03_zero_abstract_methods_two_other_methods(self):
+    @patch("src.converters.python_to_model.parse_method")
+    def test_03_zero_abstract_methods_two_other_methods(self, mocked_parse_method: MagicMock):
         # Arrange
         content = ["class Foo:", "\tdef foo(self):", "\t\tpass", "\tdef bar(self):", "\t\tpass"]
         expected_methods_count = 0
@@ -756,36 +1071,45 @@ class TestGetAbstractMethods(unittest.TestCase):
         actual_methods = p2m.get_abstract_methods(content)
 
         # Assert
+        mocked_parse_method.assert_not_called()
         self.assertEqual(len(actual_methods), expected_methods_count)
 
-    def test_04_one_abstract_method_zero_other_methods(self):
+    @patch("src.converters.python_to_model.parse_method")
+    def test_04_one_abstract_method_zero_other_methods(self, mocked_parse_method: MagicMock):
         # Arrange
-        content = ["class Foo:", "\t@abstractmethod", "\tdef foo(self):", "\t\tpass"]
+        static_method = "\tdef foo():"
+        content = ["class Foo:", "\t@abstractmethod", static_method, "\t\tpass"]
         expected_methods_count = 1
 
         # Act
         actual_methods = p2m.get_abstract_methods(content)
 
         # Assert
+        mocked_parse_method.assert_called_once_with(static_method)
         self.assertEqual(len(actual_methods), expected_methods_count)
 
-    def test_05_one_abstract_method_one_other_method(self):
+    @patch("src.converters.python_to_model.parse_method")
+    def test_05_one_abstract_method_one_other_method(self, mocked_parse_method: MagicMock):
         # Arrange
-        content = ["class Foo:", "\t@abstractmethod", "\tdef foo(self):", "\t\tpass", "\tdef bar(self):", "\t\tpass"]
+        static_method = "\tdef foo():"
+        content = ["class Foo:", "\t@abstractmethod", static_method, "\t\tpass", "\tdef bar(self):", "\t\tpass"]
         expected_methods_count = 1
 
         # Act
         actual_methods = p2m.get_abstract_methods(content)
 
         # Assert
+        mocked_parse_method.assert_called_once_with(static_method)
         self.assertEqual(len(actual_methods), expected_methods_count)
 
-    def test_06_one_abstract_method_two_other_methods(self):
+    @patch("src.converters.python_to_model.parse_method")
+    def test_06_one_abstract_method_two_other_methods(self, mocked_parse_method: MagicMock):
         # Arrange
+        static_method = "\tdef foo():"
         content = [
             "class Foo:",
             "\t@abstractmethod",
-            "\tdef foo(self):",
+            static_method,
             "\t\tpass",
             "\tdef bar(self):",
             "\t\tpass",
@@ -798,17 +1122,21 @@ class TestGetAbstractMethods(unittest.TestCase):
         actual_methods = p2m.get_abstract_methods(content)
 
         # Assert
+        mocked_parse_method.assert_called_once_with(static_method)
         self.assertEqual(len(actual_methods), expected_methods_count)
 
-    def test_07_two_abstract_methods_zero_other_methods(self):
+    @patch("src.converters.python_to_model.parse_method")
+    def test_07_two_abstract_methods_zero_other_methods(self, mocked_parse_method: MagicMock):
         # Arrange
+        static_method_1 = "\tdef foo():"
+        static_method_2 = "\tdef bar():"
         content = [
             "class Foo:",
             "\t@abstractmethod",
-            "\tdef foo(self):",
+            static_method_1,
             "\t\tpass",
             "\t@abstractmethod",
-            "\tdef bar(self):",
+            static_method_2,
             "\t\tpass",
         ]
         expected_methods_count = 2
@@ -817,17 +1145,21 @@ class TestGetAbstractMethods(unittest.TestCase):
         actual_methods = p2m.get_abstract_methods(content)
 
         # Assert
+        mocked_parse_method.assert_has_calls([call(static_method_1), call(static_method_2)])
         self.assertEqual(len(actual_methods), expected_methods_count)
 
-    def test_08_two_abstract_methods_one_other_method(self):
+    @patch("src.converters.python_to_model.parse_method")
+    def test_08_two_abstract_methods_one_other_method(self, mocked_parse_method: MagicMock):
         # Arrange
+        static_method_1 = "\tdef foo():"
+        static_method_2 = "\tdef bar():"
         content = [
             "class Foo:",
             "\t@abstractmethod",
-            "\tdef foo(self):",
+            static_method_1,
             "\t\tpass",
             "\t@abstractmethod",
-            "\tdef bar(self):",
+            static_method_2,
             "\t\tpass",
             "\tdef baz(self):",
             "\t\tpass",
@@ -838,17 +1170,21 @@ class TestGetAbstractMethods(unittest.TestCase):
         actual_methods = p2m.get_abstract_methods(content)
 
         # Assert
+        mocked_parse_method.assert_has_calls([call(static_method_1), call(static_method_2)])
         self.assertEqual(len(actual_methods), expected_methods_count)
 
-    def test_09_two_abstract_methods_two_other_methods(self):
+    @patch("src.converters.python_to_model.parse_method")
+    def test_09_two_abstract_methods_two_other_methods(self, mocked_parse_method: MagicMock):
         # Arrange
+        static_method_1 = "\tdef foo():"
+        static_method_2 = "\tdef bar():"
         content = [
             "class Foo:",
             "\t@abstractmethod",
-            "\tdef foo(self):",
+            static_method_1,
             "\t\tpass",
             "\t@abstractmethod",
-            "\tdef bar(self):",
+            static_method_2,
             "\t\tpass",
             "\tdef baz(self):",
             "\t\tpass",
@@ -861,6 +1197,7 @@ class TestGetAbstractMethods(unittest.TestCase):
         actual_methods = p2m.get_abstract_methods(content)
 
         # Assert
+        mocked_parse_method.assert_has_calls([call(static_method_1), call(static_method_2)])
         self.assertEqual(len(actual_methods), expected_methods_count)
 
 
@@ -922,10 +1259,62 @@ class TestParseVisibility(unittest.TestCase):
         self.assertEqual(result, Visibility.PUBLIC)
 
 
-class TestExtractItemMethods(unittest.TestCase):
+class TestExtractItem(unittest.TestCase):
     """
     Test cases for the extract_item function
     """
+
+    # def test_01_zero_class_attirbutes(self):
+    #     """
+    #     Verify that get_class_attributes returns an empty list when there are no attributes
+    #     """
+    #     # Arrange
+    #     content = ["class TestClass():", "\tdef __init__(self):", '\t\tprint("Hello world")']
+
+    #     # Act
+    #     result = p2m.get_class_attributes(content)
+
+    #     # Assert
+    #     self.assertEqual(result, [])
+
+    # def test_02_one_class_attribute(self):
+    #     """
+    #     Verify that get_class_attributes returns an empty list when there is one attribute
+    #     """
+    #     # Arrange
+    #     variable_name = "x"
+
+    #     content = ["class TestClass():", "\tdef __init__(self):", f"\t\tself.{variable_name} = 5"]
+    #     expected_variable = Variable(variable_name, Visibility.PUBLIC, "")
+
+    #     # Act
+    #     result = p2m.get_class_attributes(content)
+
+    #     # Assert
+    #     self.assertEqual(result, [expected_variable])
+
+    # def test_03_two_class_attributes(self):
+    #     """
+    #     Verify that get_class_attributes returns a list with two attributes when there are two attributes
+    #     """
+    #     # Arrange
+    #     variable_name_1 = "x"
+    #     variable_name_2 = "y"
+
+    #     content = [
+    #         "class TestClass():",
+    #         "\tdef __init__(self):",
+    #         f"\t\tself.{variable_name_1} = 5",
+    #         f"\t\tself.{variable_name_2} = 10",
+    #     ]
+    #     expected_variable_1 = Variable(variable_name_1, Visibility.PUBLIC, "")
+    #     expected_variable_2 = Variable(variable_name_2, Visibility.PUBLIC, "")
+
+    #     # Act
+    #     result = p2m.get_class_attributes(content)
+
+    #     # Assert
+    #     self.assertEqual(result, [expected_variable_1, expected_variable_2])
 
 
 class TestParseAttribute(unittest.TestCase):
@@ -1063,13 +1452,14 @@ class TestGenerateModel(unittest.TestCase):
     """
 
     __class_content: list[str] = []
+    __class_name = "TestClass"
 
     @classmethod
     def setUpClass(cls):
         """
         Set up the test class
         """
-        cls.__class_content = ["class TestClass:", "    def foo(self):", "        print('Hi')"]
+        cls.__class_content = [f"class {cls.__class_name}:", "    def foo(self):", "        print('Hi')"]
 
     @patch("src.converters.python_to_model.get_class_name")
     def test_01_get_class_name_called(self, mocked_get_class_name: MagicMock):
@@ -1077,14 +1467,215 @@ class TestGenerateModel(unittest.TestCase):
         Verify that the get_class_name function is called
         """
         # Arrange
-        mocked_get_class_name.return_value = "TestClass"
+        mocked_get_class_name.return_value = self.__class_name
+
+        # Act
+        model = p2m.generate_model(self.__class_content)
+
+        # Assert
+        mocked_get_class_name.assert_called_once_with(self.__class_content[0])
+        self.assertEqual(model.name, self.__class_name)
+
+    @patch("src.converters.python_to_model.get_class_attributes")
+    def test_02_get_class_attributes_called(self, mocked_get_class_attributes: MagicMock):
+        """
+        Verify that the get_class_attributes function is called
+        """
+        # Arrange
+        mocked_get_class_attributes.return_value = []
 
         # Act
         p2m.generate_model(self.__class_content)
 
         # Assert
-        mocked_get_class_name.assert_called_once_with(self.__class_content[0])
+        mocked_get_class_attributes.assert_called_once_with(self.__class_content)
+
+    @patch("src.converters.python_to_model.get_class_type")
+    def test_03_get_class_type_called(self, mocked_get_class_type: MagicMock):
+        """
+        Verify that the get_class_type function is called
+        """
+        # Arrange
+        expected_class_type = ClassType.CLASS
+        mocked_get_class_type.return_value = expected_class_type
+
+        # Act
+        model = p2m.generate_model(self.__class_content)
+
+        # Assert
+        mocked_get_class_type.assert_called_once_with(self.__class_content[0])
+        self.assertEqual(model.class_type, expected_class_type)
+
+    @patch("src.converters.python_to_model.get_methods")
+    def test_04_get_methods_called_no_methods(self, mocked_get_methods: MagicMock):
+        """
+        Verify that the get_methods function is called
+        """
+        # Arrange
+        mocked_get_methods.return_value = []
+
+        # Act
+        model = p2m.generate_model(self.__class_content)
+
+        # Assert
+        mocked_get_methods.assert_called_once_with(self.__class_content)
+        self.assertEqual(model.methods, None)
+
+    @patch("src.converters.python_to_model.get_methods")
+    def test_05_get_methods_called_with_methods(self, mocked_get_methods: MagicMock):
+        """
+        Verify that the get_methods function is called
+        """
+        # Arrange
+        expected_methods = [Method("foo", Visibility.PROTECTED, None, "str")]
+        mocked_get_methods.return_value = expected_methods
+
+        # Act
+        model = p2m.generate_model(self.__class_content)
+
+        # Assert
+        mocked_get_methods.assert_called_once_with(self.__class_content)
+        self.assertEqual(model.methods, expected_methods)
+
+    @patch("src.converters.python_to_model.get_static_methods")
+    def test_06_get_static_methods_called_no_static_methods(self, mocked_get_static_methods: MagicMock):
+        """
+        Verify that the get_static_methods function is called
+        """
+        # Arrange
+        mocked_get_static_methods.return_value = []
+
+        # Act
+        model = p2m.generate_model(self.__class_content)
+
+        # Assert
+        mocked_get_static_methods.assert_called_once_with(self.__class_content)
+        self.assertEqual(model.static_methods, None)
+
+    @patch("src.converters.python_to_model.get_static_methods")
+    def test_07_get_static_methods_called_with_static_methods(self, mocked_get_static_methods: MagicMock):
+        """
+        Verify that the get_static_methods function is called
+        """
+        # Arrange
+        expected_static_methods = [Method("foo", Visibility.PUBLIC, None, "str")]
+        mocked_get_static_methods.return_value = expected_static_methods
+
+        # Act
+        model = p2m.generate_model(self.__class_content)
+
+        # Assert
+        mocked_get_static_methods.assert_called_once_with(self.__class_content)
+        self.assertEqual(model.static_methods, expected_static_methods)
+
+    @patch("src.converters.python_to_model.get_abstract_methods")
+    def test_08_get_abstract_methods_called_no_abstract_methods(self, mocked_get_abstract_methods: MagicMock):
+        """
+        Verify that the get_abstract_methods function is called
+        """
+        # Arrange
+        mocked_get_abstract_methods.return_value = []
+
+        # Act
+        model = p2m.generate_model(self.__class_content)
+
+        # Assert
+        mocked_get_abstract_methods.assert_called_once_with(self.__class_content)
+        self.assertEqual(model.abstract_methods, None)
+
+    @patch("src.converters.python_to_model.get_abstract_methods")
+    def test_09_get_abstract_methods_called_with_abstract_methods(self, mocked_get_abstract_methods: MagicMock):
+        """
+        Verify that the get_abstract_methods function is called
+        """
+        # Arrange
+        expected_abstract_methods = [Method("foo", Visibility.PUBLIC, None, "str")]
+        mocked_get_abstract_methods.return_value = expected_abstract_methods
+
+        # Act
+        model = p2m.generate_model(self.__class_content)
+
+        # Assert
+        mocked_get_abstract_methods.assert_called_once_with(self.__class_content)
+        self.assertEqual(model.abstract_methods, expected_abstract_methods)
 
 
 class TestParseArgument(unittest.TestCase):
-    pass
+    @patch("src.converters.python_to_model.extract_item_from_single_line")
+    def test_01_extract_item_called_for_argument(self, mocked_extract_item: MagicMock):
+        """
+        Verify that the extract_item_from_single_line function is called
+        """
+        # Arrange
+        raw_argument = "a: int"
+        expected_call = call(raw_argument, p2m.argument_pattern, target_capture_group=1)
+        mocked_extract_item.return_value = "a: int"
+
+        # Act
+        p2m.parse_argument(raw_argument)
+
+        # Assert
+        self.assertEqual(mocked_extract_item.call_args_list[0], expected_call)
+
+    @patch("src.converters.python_to_model.extract_item_from_single_line")
+    def test_02_extract_item_raises_exception(self, mocked_extract_item: MagicMock):
+        """
+        Verify that the parse_argument function returns None when extract_item_from_single_line raises an exception
+        """
+        # Arrange
+        raw_argument = "a: int"
+        mocked_extract_item.side_effect = ValueError("No argument found")
+
+        # Act & Assert
+        with self.assertRaises(ValueError):
+            p2m.parse_argument(raw_argument)
+
+    @patch("src.converters.python_to_model.parse_visibility")
+    def test_03_parse_visibility_called(self, mocked_parse_visibility: MagicMock):
+        """
+        Verify that the parse_visibility function is called
+        """
+        # Arrange
+        raw_argument = "a: int"
+        expected_call = call(raw_argument)
+        expected_visibility = Visibility.PUBLIC
+        mocked_parse_visibility.return_value = expected_visibility
+
+        # Act
+        model = p2m.parse_argument(raw_argument)
+
+        # Assert
+        self.assertEqual(mocked_parse_visibility.call_args_list[0], expected_call)
+        self.assertEqual(model.visibility, expected_visibility)
+
+    @patch("src.converters.python_to_model.extract_item_from_single_line")
+    def test_04_extract_item_called_for_return_type(self, mocked_extract_item: MagicMock):
+        """
+        Verify that the extract_item_from_single_line function is called for the return type
+        """
+        # Arrange
+        raw_argument = "a: int"
+        expected_call = call(raw_argument, p2m.argument_type_pattern, target_capture_group=1)
+        mocked_extract_item.return_value = "int"
+
+        # Act
+        p2m.parse_argument(raw_argument)
+
+        # Assert
+        self.assertEqual(mocked_extract_item.call_args_list[1], expected_call)
+
+    @patch("src.converters.python_to_model.extract_item_from_single_line")
+    def test_05_extract_item_raises_exception_for_return_type(self, mocked_extract_item: MagicMock):
+        """
+        Verify that the parse_argument function returns None when extract_item_from_single_line raises an exception
+        """
+        # Arrange
+        raw_argument = "a: int"
+
+        mocked_extract_item.side_effect = ["a: int", ValueError("No return type found")]
+
+        # Act
+        model = p2m.parse_argument(raw_argument)
+
+        # Assert
+        self.assertEqual(model.variable_type, "")

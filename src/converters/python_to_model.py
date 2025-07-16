@@ -27,6 +27,7 @@ method_return_type_pattern = re.compile(r"def .*\(.*\) *-> *([a-zA-Z0-9_-]*).*")
 
 # Argument-related patterns
 # TODO - Consider changing all other variable name captures to this group
+arguments_pattern = re.compile(r".*\((.*)\).*")
 argument_pattern = re.compile(r"([a-zA-Z0-9_-]).*")
 argument_type_pattern = re.compile(r".*: *(.*) +=.*")
 
@@ -129,22 +130,19 @@ def get_class_name(content: str) -> str:
     :param content: Line from the python code containing the class definition.
     :return: The name of the class.
     """
-    match class_name_pattern.match(content):
-        case re.Match() as match_result:
-            return match_result.group(1)
-        case _:
-            raise ValueError("No class name found")
+    content = content.strip()
+    return extract_item_from_single_line(content, class_name_pattern, target_capture_group=1)
 
 
 def get_class_attributes(content: list[str]) -> list[Variable]:
     """
-    Get the attributes of a class
+    Get the attributes of a class.
     The function expects only one class in the file content.
-    :param content: The contents of the Python file.
+    :param content: Lines containing a Python class
     :return: The attributes of the class.
     """
 
-    raw_attributes = extract_item(content, attribute_pattern)
+    raw_attributes = extract_item_from_multiple_lines(content, attribute_pattern)
 
     return [parse_attribute(raw_attribute) for raw_attribute in raw_attributes]
 
@@ -157,11 +155,11 @@ def get_class_type(content: str) -> ClassType:
     :return: The type of the class.
     """
     content = content.strip()
-    match class_parents_pattern.match(content):
-        case re.Match() as match_result:
-            class_type = match_result.group(1)
-        case None:
-            return ClassType.CLASS
+
+    try:
+        class_type: str = extract_item_from_single_line(content, class_pattern, target_capture_group=1)
+    except ValueError:
+        return ClassType.CLASS
 
     if PARENT_ABSTRACT_NAME in class_type:
         return ClassType.ABSTRACT
@@ -178,11 +176,11 @@ def get_methods(content: list[str]) -> list[Method]:
     """
     Get the methods of a class.
     The function expects only one class in the file content.
-    :param content: The contents of the Python file.
+    :param content: A whole class.
     :return: The methods of the class.
     """
 
-    raw_methods = extract_item(content, method_pattern)
+    raw_methods = extract_item_from_multiple_lines(content, method_pattern)
 
     return [parse_method(raw_method) for raw_method in raw_methods]
 
@@ -194,11 +192,11 @@ def parse_method(raw_method: str) -> Method:
     :return: The method.
     """
     raw_method = raw_method.strip()
-    match method_name_pattern.match(raw_method):
-        case re.Match() as match_result:
-            method_name = match_result.group(1)
-        case None:
-            method_name = ""
+
+    try:
+        method_name = extract_item_from_single_line(raw_method, method_name_pattern, target_capture_group=1)
+    except ValueError:
+        method_name = ""
 
     method_visibility = parse_visibility(raw_method)
 
@@ -215,19 +213,16 @@ def parse_arguments(raw_method: str) -> list[Variable]:
     :return: The arguments.
     """
     raw_method = raw_method.strip()
-    arguments_pattern = re.compile(r".*\((.*)\).*")
 
-    match arguments_pattern.match(raw_method):
-        case re.Match() as match_result:
-            raw_arguments: str = match_result.group(1)
-        case None:
-            return []
+    try:
+        raw_arguments = extract_item_from_single_line(raw_method, arguments_pattern, target_capture_group=1)
+    except ValueError:
+        return []
 
     if raw_arguments == "":
         return []
 
-    arguments = raw_arguments.split(",")
-    arguments = [argument.strip() for argument in arguments]
+    arguments = [argument.strip() for argument in raw_arguments.split(",")]
 
     parsed_arguments = [parse_argument(argument) for argument in arguments]
 
@@ -241,11 +236,10 @@ def parse_return_type(raw_method: str) -> str:
     :return: The return type.
     """
     raw_method = raw_method.strip()
-    match method_return_type_pattern.match(raw_method):
-        case re.Match() as match_result:
-            return_type = match_result.group(1).strip()
-        case None:
-            return_type = ""
+    try:
+        return_type = extract_item_from_single_line(raw_method, method_return_type_pattern, target_capture_group=1)
+    except ValueError:
+        return_type = ""
 
     return return_type
 
@@ -299,7 +293,7 @@ def parse_visibility(raw_attribute: str) -> Visibility:
     return visibility
 
 
-def extract_item(content: list[str], item_pattern: Pattern) -> list[str]:
+def extract_item_from_multiple_lines(content: list[str], item_pattern: Pattern) -> list[str]:
     """
     Extract an item from the raw string.
     :param raw_item: The raw string.
@@ -310,6 +304,23 @@ def extract_item(content: list[str], item_pattern: Pattern) -> list[str]:
     ]
 
     return result
+
+
+def extract_item_from_single_line(content: str, item_pattern: Pattern, target_capture_group: int = 0) -> str:
+    """
+    Extract an item from a single line.
+    :param content: The raw string.
+    :param item_pattern: The pattern to match the item.
+    :param target_capture_group: The capture group to return (default is 0, which returns the whole match).
+    :return: The extracted item.
+    """
+    match item_pattern.match(content):
+        case re.Match() as match_result:
+            return match_result.group(target_capture_group)
+        case None:
+            raise ValueError("No item found")
+        case _:
+            raise SyntaxError("Unexpected return type from regex match")
 
 
 def parse_attribute(line: str) -> Variable:
@@ -348,18 +359,17 @@ def parse_argument(raw_argument: str) -> Variable:
     :param raw_argument: The raw string.
     :return: The argument
     """
-    match argument_pattern.match(raw_argument):
-        case re.Match() as match_result:
-            argument_name = match_result.group(1)
-        case None:
-            raise ValueError("No argument found")
+
+    try:
+        argument_name = extract_item_from_single_line(raw_argument, argument_pattern, target_capture_group=1)
+    except ValueError as error:
+        raise ValueError("No argument name found") from error
 
     argument_visibility = parse_visibility(raw_argument)
 
-    match argument_type_pattern.match(raw_argument):
-        case re.Match() as match_result:
-            attribute_type = match_result.group(1)
-        case None:
-            attribute_type = ""
+    try:
+        attribute_type = extract_item_from_single_line(raw_argument, argument_type_pattern, target_capture_group=1)
+    except ValueError:
+        attribute_type = ""
 
     return Variable(argument_name, argument_visibility, attribute_type)
