@@ -2,7 +2,7 @@
 Module containing the tests for the python_to_model module.
 """
 
-from typing_extensions import Never
+import re
 import unittest
 import unittest.mock
 from unittest.mock import MagicMock, patch, call
@@ -223,7 +223,7 @@ class TestGetClassAttributes(unittest.TestCase):
     Test cases for the get_class_attributes function
     """
 
-    @patch("src.converters.python_to_model.extract_item")
+    @patch("src.converters.python_to_model.extract_item_from_multiple_lines")
     def test_01_extract_item_called(self, mocked_extract_item: MagicMock):
         """
         Verify that the extract_item function is called
@@ -238,7 +238,7 @@ class TestGetClassAttributes(unittest.TestCase):
         mocked_extract_item.assert_called_once_with(content, p2m.attribute_pattern)
 
     @patch("src.converters.python_to_model.parse_attribute")
-    @patch("src.converters.python_to_model.extract_item")
+    @patch("src.converters.python_to_model.extract_item_from_multiple_lines")
     def test_02_parse_attribute_called_once_when_one_attribute_is_found(
         self, mocked_extract_item: MagicMock, mocked_parse_attribute: MagicMock
     ):
@@ -257,7 +257,7 @@ class TestGetClassAttributes(unittest.TestCase):
         mocked_parse_attribute.assert_called_once_with(sample_attribute)
 
     @patch("src.converters.python_to_model.parse_attribute")
-    @patch("src.converters.python_to_model.extract_item")
+    @patch("src.converters.python_to_model.extract_item_from_multiple_lines")
     def test_03_parse_attribute_called_multiple_times_when_multiple_attributes_found(
         self, mocked_extract_item: MagicMock, mocked_parse_attribute: MagicMock
     ):
@@ -278,7 +278,7 @@ class TestGetClassAttributes(unittest.TestCase):
         self.assertEqual(mocked_parse_attribute.call_args_list, expected_calls)
 
     @patch("src.converters.python_to_model.parse_attribute")
-    @patch("src.converters.python_to_model.extract_item")
+    @patch("src.converters.python_to_model.extract_item_from_multiple_lines")
     def test_04_parse_attribute_called_once_when_no_attributes_found(
         self, mocked_extract_item: MagicMock, mocked_parse_attribute: MagicMock
     ):
@@ -403,7 +403,7 @@ class TestGetMethods(unittest.TestCase):
     Test cases for the get_methods function
     """
 
-    @patch("src.converters.python_to_model.extract_item")
+    @patch("src.converters.python_to_model.extract_item_from_multiple_lines")
     def test_01_extract_item_called(self, mocked_extract_item: MagicMock):
         """
         Verify that the extract_item function is called
@@ -418,7 +418,7 @@ class TestGetMethods(unittest.TestCase):
         mocked_extract_item.assert_called_once_with(content, p2m.method_pattern)
 
     @patch("src.converters.python_to_model.parse_method")
-    @patch("src.converters.python_to_model.extract_item")
+    @patch("src.converters.python_to_model.extract_item_from_multiple_lines")
     def test_02_parse_method_called_once_when_one_method_is_found(
         self, mocked_extract_item: MagicMock, mocked_parse_method: MagicMock
     ):
@@ -437,7 +437,7 @@ class TestGetMethods(unittest.TestCase):
         mocked_parse_method.assert_called_once_with(sample_method)
 
     @patch("src.converters.python_to_model.parse_method")
-    @patch("src.converters.python_to_model.extract_item")
+    @patch("src.converters.python_to_model.extract_item_from_multiple_lines")
     def test_03_parse_method_called_multiple_times_when_multiple_methods_found(
         self, mocked_extract_item: MagicMock, mocked_parse_method: MagicMock
     ):
@@ -458,7 +458,7 @@ class TestGetMethods(unittest.TestCase):
         self.assertEqual(mocked_parse_method.call_args_list, expected_calls)
 
     @patch("src.converters.python_to_model.parse_method")
-    @patch("src.converters.python_to_model.extract_item")
+    @patch("src.converters.python_to_model.extract_item_from_multiple_lines")
     def test_04_parse_method_called_once_when_no_methods_found(
         self, mocked_extract_item: MagicMock, mocked_parse_method: MagicMock
     ):
@@ -618,47 +618,6 @@ class TestParseMethod(unittest.TestCase):
         # Assert
         self.assertIsNone(model.return_type)
 
-    # @unittest.skip("Is self an argument that should be handled ?")
-    # def test_02_method_without_argument(self):
-    #     # Arrange
-    #     raw_method = "def foo(self)"
-
-    #     # Act
-    #     actual_method = p2m.parse_method(raw_method)
-
-    #     # Assert
-    #     self.assertIsNone(actual_method.arguments)
-
-    # def test_03_method_with_argument(self):
-    #     # Arrange
-    #     raw_method = "def foo(self, a: int)"
-
-    #     # Act
-    #     actual_method = p2m.parse_method(raw_method)
-
-    #     # Assert
-    #     self.assertIsNotNone(actual_method.arguments)
-
-    # def test_04_method_without_return_type(self):
-    #     # Arrange
-    #     raw_method = "def foo(self)"
-
-    #     # Act
-    #     actual_method = p2m.parse_method(raw_method)
-
-    #     # Assert
-    #     self.assertIsNone(actual_method.return_type)
-
-    # def test_05_method_with_return_type(self):
-    #     # Arrange
-    #     raw_method = "def foo(self) -> int:"
-
-    #     # Act
-    #     actual_method = p2m.parse_method(raw_method)
-
-    #     # Assert
-    #     self.assertIsNotNone(actual_method.return_type)
-
 
 class TestParseArguments(unittest.TestCase):
     """
@@ -734,68 +693,6 @@ class TestParseArguments(unittest.TestCase):
         # Assert
         self.assertEqual(mocked_parse_argument.call_args_list, expected_calls)
 
-    # def test_01_parse_arguments_zero_arguments(self):
-    #     # Arrange
-    #     raw_method = "def foo()"
-
-    #     # Act
-    #     actual_arguments = p2m.parse_arguments(raw_method)
-
-    #     # Assert
-    #     self.assertEqual(actual_arguments, [])
-
-    # def test_02_parse_arguments_one_argument_with_type(self):
-    #     # Arrange
-    #     variable = Variable("a", Visibility.PUBLIC, "int")
-    #     expected_arguments = [variable]
-    #     raw_method = f"def foo({variable.name}: {variable.variable_type})"
-
-    #     # Act
-    #     actual_arguments = p2m.parse_arguments(raw_method)
-
-    #     # Assert
-    #     self.assertEqual(actual_arguments, expected_arguments)
-
-    # def test_03_parse_arguments_one_argument_without_type(self):
-    #     # Arrange
-    #     variable = Variable("a", Visibility.PUBLIC, "")
-    #     expected_arguments = [variable]
-    #     raw_method = f"def foo({variable.name})"
-
-    #     # Act
-    #     actual_arguments = p2m.parse_arguments(raw_method)
-
-    #     # Assert
-    #     self.assertEqual(actual_arguments, expected_arguments)
-
-    # def test_04_parse_arguments_two_arguments_with_type(self):
-    #     # Arrange
-    #     variable_a = Variable("a", Visibility.PUBLIC, "str")
-    #     variable_b = Variable("b", Visibility.PUBLIC, "int")
-    #     expected_arguments = [variable_a, variable_b]
-    #     raw_method = (
-    #         f"def foo({variable_a.name}: {variable_a.variable_type}, {variable_b.name}: {variable_b.variable_type})"
-    #     )
-
-    #     # Act
-    #     actual_arguments = p2m.parse_arguments(raw_method)
-
-    #     # Assert
-    #     self.assertEqual(actual_arguments, expected_arguments)
-
-    # def test_05_parse_arguments_two_arguments_without_type(self):
-    #     # Arrange
-    #     variable_a = Variable("a", Visibility.PUBLIC, "")
-    #     variable_b = Variable("b", Visibility.PUBLIC, "")
-    #     expected_arguments = [variable_a, variable_b]
-    #     raw_method = f"def foo({variable_a.name}, {variable_b.name})"
-
-    #     # Act
-    #     actual_arguments = p2m.parse_arguments(raw_method)
-
-    #     # Assert
-    #     self.assertEqual(actual_arguments, expected_arguments)
-
 
 class TestParseReturnType(unittest.TestCase):
     """
@@ -835,28 +732,6 @@ class TestParseReturnType(unittest.TestCase):
 
         # Assert
         self.assertEqual(model, "")
-
-    # def test_01_return_type(self):
-    #     # Arrange
-    #     expected_return_type = "int"
-    #     raw_method = f"def foo(self) -> {expected_return_type}:"
-
-    #     # Act
-    #     actual_return_type = p2m.parse_return_type(raw_method)
-
-    #     # Assert
-    #     self.assertEqual(actual_return_type, expected_return_type)
-
-    # def test_02_no_return_type(self):
-    #     # Arrange
-    #     raw_method = "def foo(self):"
-    #     expected_return_type = ""
-
-    #     # Act
-    #     actual_return_type = p2m.parse_return_type(raw_method)
-
-    #     # Assert
-    #     self.assertEqual(actual_return_type, expected_return_type)
 
 
 class TestGetStaticMethods(unittest.TestCase):
@@ -921,7 +796,7 @@ class TestGetStaticMethods(unittest.TestCase):
     def test_05_one_static_method_one_other_method(self, mocked_parse_method: MagicMock):
         # Arrange
         static_method = "\tdef foo():"
-        content = ["class Foo:", static_method, "\tdef foo():", "\t\tpass", "\tdef bar(self):", "\t\tpass"]
+        content = ["class Foo:", "\t@staticmethod", static_method, "\t\tpass", "\tdef bar(self):", "\t\tpass"]
         expected_methods_count = 1
 
         # Act
@@ -1259,62 +1134,816 @@ class TestParseVisibility(unittest.TestCase):
         self.assertEqual(result, Visibility.PUBLIC)
 
 
-class TestExtractItem(unittest.TestCase):
+class TestExtractItemFromMultipleLines(unittest.TestCase):
     """
     Test cases for the extract_item function
     """
 
-    # def test_01_zero_class_attirbutes(self):
-    #     """
-    #     Verify that get_class_attributes returns an empty list when there are no attributes
-    #     """
-    #     # Arrange
-    #     content = ["class TestClass():", "\tdef __init__(self):", '\t\tprint("Hello world")']
+    pass
 
-    #     # Act
-    #     result = p2m.get_class_attributes(content)
 
-    #     # Assert
-    #     self.assertEqual(result, [])
+class TestExtractItemFromMultipleLinesMethodPattern(unittest.TestCase):
+    def test_01_one_method(self):
+        # Arrange
+        expected_methods = ["def foo(self):"]
+        raw_content = ["class Foo:", f"\t{expected_methods[0]}", "\t\tpass"]
 
-    # def test_02_one_class_attribute(self):
-    #     """
-    #     Verify that get_class_attributes returns an empty list when there is one attribute
-    #     """
-    #     # Arrange
-    #     variable_name = "x"
+        # Act
+        actual_methods = p2m.extract_item_from_multiple_lines(raw_content, p2m.method_pattern)
 
-    #     content = ["class TestClass():", "\tdef __init__(self):", f"\t\tself.{variable_name} = 5"]
-    #     expected_variable = Variable(variable_name, Visibility.PUBLIC, "")
+        # Assert
+        self.assertEqual(actual_methods, expected_methods)
 
-    #     # Act
-    #     result = p2m.get_class_attributes(content)
+    def test_02_static_methods_ignored(self):
+        # Arrange
+        expected_methods = ["def foo(self):"]
+        raw_content = [
+            "class Foo:",
+            f"\t{expected_methods[0]}",
+            "\t\tpass",
+            "\t@staticmethod",
+            "\tdef bar(foo):",
+            "\t\tpass",
+        ]
 
-    #     # Assert
-    #     self.assertEqual(result, [expected_variable])
+        # Act
+        actual_methods = p2m.extract_item_from_multiple_lines(raw_content, p2m.method_pattern)
 
-    # def test_03_two_class_attributes(self):
-    #     """
-    #     Verify that get_class_attributes returns a list with two attributes when there are two attributes
-    #     """
-    #     # Arrange
-    #     variable_name_1 = "x"
-    #     variable_name_2 = "y"
+        # Assert
+        self.assertEqual(actual_methods, expected_methods)
 
-    #     content = [
-    #         "class TestClass():",
-    #         "\tdef __init__(self):",
-    #         f"\t\tself.{variable_name_1} = 5",
-    #         f"\t\tself.{variable_name_2} = 10",
-    #     ]
-    #     expected_variable_1 = Variable(variable_name_1, Visibility.PUBLIC, "")
-    #     expected_variable_2 = Variable(variable_name_2, Visibility.PUBLIC, "")
+    def test_03_abstract_methods_ignored(self):
+        # Arrange
+        expected_methods = ["def foo(self):"]
+        raw_content = [
+            "class Foo:",
+            f"\t{expected_methods[0]}",
+            "\t\tpass",
+            "\t@abstractmethod",
+            "\tdef bar(foo):",
+            "\t\tpass",
+        ]
 
-    #     # Act
-    #     result = p2m.get_class_attributes(content)
+        # Act
+        actual_methods = p2m.extract_item_from_multiple_lines(raw_content, p2m.method_pattern)
 
-    #     # Assert
-    #     self.assertEqual(result, [expected_variable_1, expected_variable_2])
+        # Assert
+        self.assertEqual(actual_methods, expected_methods)
+
+    def test_04_init_method(self):
+        # Arrange
+        expected_methods = ["def __init__(self):"]
+        raw_content = ["class Foo:", f"\t{expected_methods[0]}", "\t\tprint('Hello')", "\t\tprint('World')"]
+
+        # Act
+        actual_methods = p2m.extract_item_from_multiple_lines(raw_content, p2m.method_pattern)
+
+        # Assert
+        self.assertEqual(actual_methods, expected_methods)
+
+    def test_05_dunder_method(self):
+        # Arrange
+        expected_methods = ["def __str__(self):"]
+        raw_content = ["class Foo:", f"\t{expected_methods[0]}", "\t\tprint('Hello')", "\t\tprint('World')"]
+
+        # Act
+        actual_methods = p2m.extract_item_from_multiple_lines(raw_content, p2m.method_pattern)
+
+        # Assert
+        self.assertEqual(actual_methods, expected_methods)
+
+    def test_06_class_method(self):
+        # Arrange
+        expected_methods = []
+        raw_content = [
+            "class Foo:",
+            "\t@classmethod",
+            "\tdef foo(cls):",
+            "\t\tprint('Hello')",
+            "\t\tprint('World')",
+        ]
+
+        # Act
+        actual_methods = p2m.extract_item_from_multiple_lines(raw_content, p2m.method_pattern)
+
+        # Assert
+        self.assertEqual(actual_methods, expected_methods)
+
+    def test_07_two_methods(self):
+        # Arrange
+        expected_methods = ["def foo(self):", "def bar(self):"]
+        raw_content = [
+            "class Foo:",
+            f"\t{expected_methods[0]}",
+            "\t\tprint('Hello')",
+            "\t\tprint('World')",
+            "\n",
+            "\n",
+            f"\t{expected_methods[1]}",
+            "\t\tprint('Hello')",
+            "\t\tprint('World')",
+        ]
+
+        # Act
+        actual_methods = p2m.extract_item_from_multiple_lines(raw_content, p2m.method_pattern)
+
+        # Assert
+        self.assertEqual(actual_methods, expected_methods)
+
+    def test_08_three_methods(self):
+        # Arrange
+        expected_methods = ["def foo(self):", "def bar(self):", "def baz(self):"]
+        raw_content = [
+            "class Foo:",
+            f"\t{expected_methods[0]}",
+            "\t\tprint('Hello')",
+            "\t\tprint('World')",
+            "\n",
+            "\n",
+            f"\t{expected_methods[1]}",
+            "\t\tprint('Hello')",
+            "\t\tprint('World')",
+            "\n",
+            f"\t{expected_methods[2]}",
+            "\t\tprint('Hello')",
+            "\t\tprint('World')",
+        ]
+
+        # Act
+        actual_methods = p2m.extract_item_from_multiple_lines(raw_content, p2m.method_pattern)
+
+        # Assert
+        self.assertEqual(actual_methods, expected_methods)
+
+    def test_09_two_methods_static_in_between(self):
+        # Arrange
+        expected_methods = ["def foo(self):", "def baz(self):"]
+        raw_content = [
+            "class Foo:",
+            f"\t{expected_methods[0]}",
+            "\t\tprint('Hello')",
+            "\t\tprint('World')",
+            "\n",
+            "\n",
+            "\t@staticmethod" "\tdef bar():",
+            "\t\tprint('Hello')",
+            "\t\tprint('World')",
+            "\n",
+            f"\t{expected_methods[1]}",
+            "\t\tprint('Hello')",
+            "\t\tprint('World')",
+        ]
+
+        # Act
+        actual_methods = p2m.extract_item_from_multiple_lines(raw_content, p2m.method_pattern)
+
+        # Assert
+        self.assertEqual(actual_methods, expected_methods)
+
+    def test_10_method_with_arguments_and_type_hint(self):
+        # Arrange
+        expected_methods = ["def foo(self, first: int) -> dict[str, int]:"]
+        raw_content = ["class Foo:", f"\t{expected_methods[0]}", "\t\tpass"]
+
+        # Act
+        actual_methods = p2m.extract_item_from_multiple_lines(raw_content, p2m.method_pattern)
+
+        # Assert
+        self.assertEqual(actual_methods, expected_methods)
+
+
+class TestExtractItemFromMultipleLinesAttributePattern(unittest.TestCase):
+    def test_01_zero_class_attributes(self):
+        """
+        Verify that get_class_attributes returns an empty list when there are no attributes
+        """
+        # Arrange
+        content = ["class TestClass():", "\tdef __init__(self):", '\t\tprint("Hello world")']
+
+        # Act
+        result = p2m.extract_item_from_multiple_lines(content, p2m.attribute_pattern)
+
+        # Assert
+        self.assertEqual(result, [])
+
+    def test_02_one_class_attribute(self):
+        """
+        Verify that get_class_attributes returns an empty list when there is one attribute
+        """
+        # Arrange
+        expected_attributes = ["self.first = 5"]
+
+        content = ["class TestClass():", "\tdef __init__(self):", f"\t\t{expected_attributes[0]}"]
+
+        # Act
+        actual_attributes = p2m.extract_item_from_multiple_lines(content, p2m.attribute_pattern)
+
+        # Assert
+        self.assertEqual(actual_attributes, expected_attributes)
+
+    def test_03_two_class_attributes(self):
+        """
+        Verify that get_class_attributes returns a list with two attributes when there are two attributes
+        """
+        # Arrange
+        expected_attributes = ["self.first = 5", "self.second_attribute = 10"]
+
+        content = [
+            "class TestClass():",
+            "\tdef __init__(self):",
+            f"\t\t{expected_attributes[0]}",
+            f"\t\t{expected_attributes[1]}",
+        ]
+        # Act
+        actual_attributes = p2m.extract_item_from_multiple_lines(content, p2m.attribute_pattern)
+
+        # Assert
+        self.assertEqual(actual_attributes, expected_attributes)
+
+    def test_04_one_private_class_attribute(self):
+        """
+        Verify that get_class_attributes returns an empty list when there is one attribute
+        """
+        # Arrange
+        expected_attributes = ["self.__first = 5"]
+
+        content = ["class TestClass():", "\tdef __init__(self):", f"\t\t{expected_attributes[0]}"]
+
+        # Act
+        actual_attributes = p2m.extract_item_from_multiple_lines(content, p2m.attribute_pattern)
+
+        # Assert
+        self.assertEqual(actual_attributes, expected_attributes)
+
+    def test_05_one_class_attribute_with_type_hint(self):
+        """
+        Verify that get_class_attributes returns an empty list when there is one attribute
+        """
+        # Arrange
+        expected_attributes = ["self.first: int = 5"]
+
+        content = ["class TestClass():", "\tdef __init__(self):", f"\t\t{expected_attributes[0]}"]
+
+        # Act
+        actual_attributes = p2m.extract_item_from_multiple_lines(content, p2m.attribute_pattern)
+
+        # Assert
+        self.assertEqual(actual_attributes, expected_attributes)
+
+    def test_06_two_class_attributes_with_complex_type_hint(self):
+        # Arrange
+        expected_attributes = ["self.first = 5", "self.second_attribute: tuple[int, str] = (10, 'hello')"]
+
+        content = [
+            "class TestClass():",
+            "\tdef __init__(self):",
+            f"\t\t{expected_attributes[0]}",
+            f"\t\t{expected_attributes[1]}",
+        ]
+        # Act
+        actual_attributes = p2m.extract_item_from_multiple_lines(content, p2m.attribute_pattern)
+
+        # Assert
+        self.assertEqual(actual_attributes, expected_attributes)
+
+    def test_07_two_class_attributes_with_code_between(self):
+        # Arrange
+        expected_attributes = ["self.first = 5", "self.second_attribute: tuple[int, str] = (10, 'hello')"]
+
+        content = [
+            "class TestClass():",
+            "\tdef __init__(self):",
+            f"\t\t{expected_attributes[0]}",
+            "\t\tprint('Hello world')",
+            f"\t\t{expected_attributes[1]}",
+        ]
+        # Act
+        actual_attributes = p2m.extract_item_from_multiple_lines(content, p2m.attribute_pattern)
+
+        # Assert
+        self.assertEqual(actual_attributes, expected_attributes)
+
+
+class TestExtractItemFromSingleLineGeneralFunctionality(unittest.TestCase):
+    def __init__(self, methodName: str = "runTest") -> None:
+        super().__init__(methodName)
+        self.__sample_words = ["hello", "world"]
+        self.__sample_content = " ".join(self.__sample_words)
+        self.__sample_regex = re.compile(r"([a-z]*) ([a-z]*)")
+
+    def test_01_match_present(self):
+        # Arrange
+        expected_item = self.__sample_content
+
+        # Act
+        actual_item = p2m.extract_item_from_single_line(self.__sample_content, self.__sample_regex)
+
+        # Assert
+        self.assertEqual(actual_item, expected_item)
+
+    def test_02_target_group_returned(self):
+        # Arrange
+        target_group = 1
+        expected_item = self.__sample_words[target_group - 1]
+
+        # Act
+        actual_item = p2m.extract_item_from_single_line(self.__sample_content, self.__sample_regex, target_group)
+
+        # Assert
+        self.assertEqual(actual_item, expected_item)
+
+    def test_03_match_returns_none(self):
+        # Arrange
+        regex = re.compile("qwerty")
+
+        # Act & Assert
+        with self.assertRaises(ValueError):
+            p2m.extract_item_from_single_line(self.__sample_content, regex)
+
+
+class TestExtractItemFromSingleLineClassName(unittest.TestCase):
+    def test_01_no_inheritance(self):
+        # Arrange
+        expected_class_name = "Foo"
+        content = f"class {expected_class_name}:"
+
+        # Act
+        actual_class_name = p2m.extract_item_from_single_line(content, p2m.class_name_pattern, 1)
+
+        # Assert
+        self.assertEqual(actual_class_name, expected_class_name)
+
+    def test_02_single_inheritance(self):
+        # Arrange
+        expected_class_name = "Foo"
+        content = f"class {expected_class_name}(Base):"
+
+        # Act
+        actual_class_name = p2m.extract_item_from_single_line(content, p2m.class_name_pattern, 1)
+
+        # Assert
+        self.assertEqual(actual_class_name, expected_class_name)
+
+    def test_03_multiple_inheritance(self):
+        # Arrange
+        expected_class_name = "Foo"
+        content = f"class {expected_class_name}(Base1, Base2):"
+
+        # Act
+        actual_class_name = p2m.extract_item_from_single_line(content, p2m.class_name_pattern, 1)
+
+        # Assert
+        self.assertEqual(actual_class_name, expected_class_name)
+
+    def test_04_white_space(self):
+        # Arrange
+        expected_class_name = "Foo"
+        content = f"class   {expected_class_name}  (Base)   :       "
+
+        # Act
+        actual_class_name = p2m.extract_item_from_single_line(content, p2m.class_name_pattern, 1)
+
+        # Assert
+        self.assertEqual(actual_class_name, expected_class_name)
+
+    def test_05_complex_name(self):
+        # Arrange
+        expected_class_name = "FooBarBaz123_qwerty"
+        content = f"class {expected_class_name}(Base):"
+
+        # Act
+        actual_class_name = p2m.extract_item_from_single_line(content, p2m.class_name_pattern, 1)
+
+        # Assert
+        self.assertEqual(actual_class_name, expected_class_name)
+
+
+class TestExtractItemFromSingleLineClassTypePattern(unittest.TestCase):
+    def test_01_no_inheritance(self):
+        # Arrange
+        expected_class_content = "Foo"
+        content = f"class {expected_class_content}:"
+
+        # Act
+        actual_class_content = p2m.extract_item_from_single_line(
+            content, p2m.class_type_pattern, target_capture_group=1
+        )
+
+        # Assert
+        self.assertEqual(actual_class_content, expected_class_content)
+
+    def test_02_single_inheritance(self):
+        # Arrange
+        expected_class_content = "Foo(Bar)"
+        content = f"class {expected_class_content}:"
+
+        # Act
+        actual_class_content = p2m.extract_item_from_single_line(
+            content, p2m.class_type_pattern, target_capture_group=1
+        )
+
+        # Assert
+        self.assertEqual(actual_class_content, expected_class_content)
+
+    def test_03_multiple_inheritance(self):
+        # Arrange
+        expected_class_content = "Foo(Bar, Enum)"
+        content = f"class {expected_class_content}:"
+
+        # Act
+        actual_class_content = p2m.extract_item_from_single_line(
+            content, p2m.class_type_pattern, target_capture_group=1
+        )
+
+        # Assert
+        self.assertEqual(actual_class_content, expected_class_content)
+
+
+class TestExtractItemFromSingleLineMethodNamePattern(unittest.TestCase):
+    def test_01_simple_name(self):
+        # Arrange
+        expected_method_name = "foo"
+        content = f"def {expected_method_name}(self):"
+
+        # Act
+        actual_method_name = p2m.extract_item_from_single_line(
+            content, p2m.method_name_pattern, target_capture_group=1
+        )
+
+        # Assert
+        self.assertEqual(actual_method_name, expected_method_name)
+
+    def test_02_complex_name(self):
+        # Arrange
+        expected_method_name = "foo_bar_baz_123A"
+        content = f"def {expected_method_name}(self):"
+
+        # Act
+        actual_method_name = p2m.extract_item_from_single_line(
+            content, p2m.method_name_pattern, target_capture_group=1
+        )
+
+        # Assert
+        self.assertEqual(actual_method_name, expected_method_name)
+
+    def test_03_multiple_arguments_and_return_type(self):
+        # Arrange
+        expected_method_name = "foo_bar_baz"
+        content = f"def {expected_method_name}(self, a: int, b) -> str:"
+
+        # Act
+        actual_method_name = p2m.extract_item_from_single_line(
+            content, p2m.method_name_pattern, target_capture_group=1
+        )
+
+        # Assert
+        self.assertEqual(actual_method_name, expected_method_name)
+
+    def test_04_white_space(self):
+        # Arrange
+        expected_method_name = "foo_bar_baz"
+        content = f"def     {expected_method_name}  (self, a: int, b) -> str:"
+
+        # Act
+        actual_method_name = p2m.extract_item_from_single_line(
+            content, p2m.method_name_pattern, target_capture_group=1
+        )
+
+        # Assert
+        self.assertEqual(actual_method_name, expected_method_name)
+
+
+class TestExtractItemFromSingleLineMethodReturnTypePattern(unittest.TestCase):
+    def test_01_return_type(self):
+        # Arrange
+        expected_return_type = "int"
+        raw_method = f"def foo(self) -> {expected_return_type}:"
+
+        # Act
+        actual_return_type = p2m.extract_item_from_single_line(
+            raw_method, p2m.method_return_type_pattern, target_capture_group=1
+        )
+
+        # Assert
+        self.assertEqual(actual_return_type, expected_return_type)
+
+    def test_02_no_return_type(self):
+        # Arrange
+        raw_method = "def foo(self):"
+
+        # Act & Assert
+        with self.assertRaises(ValueError):
+            p2m.extract_item_from_single_line(raw_method, p2m.method_return_type_pattern, target_capture_group=1)
+
+    def test_03_complex_type_old_syntax(self):
+        # Arrange
+        expected_return_type = "List[int]"
+        raw_method = f"def foo(self) -> {expected_return_type}:"
+
+        # Act
+        actual_return_type = p2m.extract_item_from_single_line(
+            raw_method, p2m.method_return_type_pattern, target_capture_group=1
+        )
+
+        # Assert
+        self.assertEqual(actual_return_type, expected_return_type)
+
+    def test_04_complex_type_new_syntax(self):
+        # Arrange
+        expected_return_type = "list[int]"
+        raw_method = f"def foo(self) -> {expected_return_type}:"
+
+        # Act
+        actual_return_type = p2m.extract_item_from_single_line(
+            raw_method, p2m.method_return_type_pattern, target_capture_group=1
+        )
+
+        # Assert
+        self.assertEqual(actual_return_type, expected_return_type)
+
+    def test_05_no_whitespace(self):
+        # Arrange
+        expected_return_type = "int"
+        raw_method = f"def foo(self)->{expected_return_type}:"
+
+        # Act
+        actual_return_type = p2m.extract_item_from_single_line(
+            raw_method, p2m.method_return_type_pattern, target_capture_group=1
+        )
+
+        # Assert
+        self.assertEqual(actual_return_type, expected_return_type)
+
+    def test_06_whitespace(self):
+        # Arrange
+        expected_return_type = "int"
+        raw_method = f"def foo(self) ->  {expected_return_type} :"
+
+        # Act
+        actual_return_type = p2m.extract_item_from_single_line(
+            raw_method, p2m.method_return_type_pattern, target_capture_group=1
+        )
+
+        # Assert
+        self.assertEqual(actual_return_type, expected_return_type)
+
+    def test_07_nested_complex_syntax(self):
+        # Arrange
+        expected_return_type = "dict[str, list[int]]"
+        raw_method = f"def foo(self) -> {expected_return_type}:"
+
+        # Act
+        actual_return_type = p2m.extract_item_from_single_line(
+            raw_method, p2m.method_return_type_pattern, target_capture_group=1
+        )
+
+        # Assert
+        self.assertEqual(actual_return_type, expected_return_type)
+
+
+class TestExtractItemFromSingleLineArgumentsPattern(unittest.TestCase):
+    def test_01_zero_arguments(self):
+        # Arrange
+        expected_arguments = ""
+        raw_method = f"def foo({expected_arguments})"
+
+        # Act
+        actual_arguments = p2m.extract_item_from_single_line(raw_method, p2m.arguments_pattern, target_capture_group=1)
+
+        # Assert
+        self.assertEqual(actual_arguments, expected_arguments)
+
+    def test_02_one_argument_with_type(self):
+        # Arrange
+        expected_arguments = "first: int"
+        raw_method = f"def foo({expected_arguments})"
+
+        # Act
+        actual_arguments = p2m.extract_item_from_single_line(raw_method, p2m.arguments_pattern, target_capture_group=1)
+
+        # Assert
+        self.assertEqual(actual_arguments, expected_arguments)
+
+    def test_03_one_argument_without_type(self):
+        # Arrange
+        expected_arguments = "first"
+        raw_method = f"def foo({expected_arguments})"
+
+        # Act
+        actual_arguments = p2m.extract_item_from_single_line(raw_method, p2m.arguments_pattern, target_capture_group=1)
+
+        # Assert
+        self.assertEqual(actual_arguments, expected_arguments)
+
+    def test_04_two_arguments_with_type(self):
+        # Arrange
+        expected_arguments = "first: int, second: str"
+        raw_method = f"def foo({expected_arguments})"
+
+        # Act
+        actual_arguments = p2m.extract_item_from_single_line(raw_method, p2m.arguments_pattern, target_capture_group=1)
+
+        # Assert
+        self.assertEqual(actual_arguments, expected_arguments)
+
+    def test_05_two_arguments_without_type(self):
+        # Arrange
+        expected_arguments = "first, second"
+        raw_method = f"def foo({expected_arguments})"
+
+        # Act
+        actual_arguments = p2m.extract_item_from_single_line(raw_method, p2m.arguments_pattern, target_capture_group=1)
+
+        # Assert
+        self.assertEqual(actual_arguments, expected_arguments)
+
+    def test_06_two_arguments_one_with_type_one_without(self):
+        # Arrange
+        expected_arguments = "first, second: int"
+        raw_method = f"def foo({expected_arguments})"
+
+        # Act
+        actual_arguments = p2m.extract_item_from_single_line(raw_method, p2m.arguments_pattern, target_capture_group=1)
+
+        # Assert
+        self.assertEqual(actual_arguments, expected_arguments)
+
+    def test_07_complex_names(self):
+        # Arrange
+        expected_arguments = "first_argument: int, secondArgument"
+        raw_method = f"def foo({expected_arguments})"
+
+        # Act
+        actual_arguments = p2m.extract_item_from_single_line(raw_method, p2m.arguments_pattern, target_capture_group=1)
+
+        # Assert
+        self.assertEqual(actual_arguments, expected_arguments)
+
+    def test_08_return_type_and_default_value(self):
+        # Arrange
+        expected_arguments = "first: list[list[int]], second: list[str] = [], third: int = 42"
+        raw_method = f"def foo({expected_arguments})"
+
+        # Act
+        actual_arguments = p2m.extract_item_from_single_line(raw_method, p2m.arguments_pattern, target_capture_group=1)
+
+        # Assert
+        self.assertEqual(actual_arguments, expected_arguments)
+
+
+class TestExtractItemFromSingleLineArgumentNamePattern(unittest.TestCase):
+    def test_01_one_argument_with_type(self):
+        # Arrange
+        expected_argument_name = "first"
+        raw_argument = f"{expected_argument_name}: int"
+
+        # Act
+        actual_arguments = p2m.extract_item_from_single_line(
+            raw_argument, p2m.argument_name_pattern, target_capture_group=1
+        )
+
+        # Assert
+        self.assertEqual(actual_arguments, expected_argument_name)
+
+    def test_02_one_argument_without_type(self):
+        # Arrange
+        expected_argument_name = "first"
+        raw_argument = f"{expected_argument_name}"
+
+        # Act
+        actual_arguments = p2m.extract_item_from_single_line(
+            raw_argument, p2m.argument_name_pattern, target_capture_group=1
+        )
+
+        # Assert
+        self.assertEqual(actual_arguments, expected_argument_name)
+
+    def test_03_complex_names(self):
+        # Arrange
+        expected_argument_name = "first_argument"
+        raw_argument = f"{expected_argument_name}: int"
+
+        # Act
+        actual_arguments = p2m.extract_item_from_single_line(
+            raw_argument, p2m.argument_name_pattern, target_capture_group=1
+        )
+
+        # Assert
+        self.assertEqual(actual_arguments, expected_argument_name)
+
+    def test_04_complex_type(self):
+        # Arrange
+        expected_argument_name = "first"
+        raw_argument = f"{expected_argument_name}: list[list[int]]"
+
+        # Act
+        actual_arguments = p2m.extract_item_from_single_line(
+            raw_argument, p2m.argument_name_pattern, target_capture_group=1
+        )
+
+        # Assert
+        self.assertEqual(actual_arguments, expected_argument_name)
+
+    def test_05_default_value_no_type_hint(self):
+        # Arrange
+        expected_argument_name = "first"
+        raw_argument = f"{expected_argument_name} = 5"
+
+        # Act
+        actual_arguments = p2m.extract_item_from_single_line(
+            raw_argument, p2m.argument_name_pattern, target_capture_group=1
+        )
+
+        # Assert
+        self.assertEqual(actual_arguments, expected_argument_name)
+
+    def test_06_default_value_with_type_hint(self):
+        # Arrange
+        expected_argument_name = "first"
+        raw_argument = f"{expected_argument_name}: tuple[str, int] = ('', 2)"
+
+        # Act
+        actual_arguments = p2m.extract_item_from_single_line(
+            raw_argument, p2m.argument_name_pattern, target_capture_group=1
+        )
+
+        # Assert
+        self.assertEqual(actual_arguments, expected_argument_name)
+
+
+class TestExtractItemFromSingleLineArgumentTypePattern(unittest.TestCase):
+    def test_01_no_argument_type(self):
+        # Arrange
+        raw_argument = "first"
+
+        # Act & Assert
+        with self.assertRaises(ValueError):
+            p2m.extract_item_from_single_line(raw_argument, p2m.argument_type_pattern, target_capture_group=1)
+
+    def test_02_simple_argument_type(self):
+        # Arrange
+        expected_argument_type = "int"
+        raw_argument = f"first: {expected_argument_type}"
+
+        # Act
+        actual_argument_type = p2m.extract_item_from_single_line(
+            raw_argument, p2m.argument_type_pattern, target_capture_group=1
+        )
+
+        # Assert
+        self.assertEqual(actual_argument_type, expected_argument_type)
+
+    def test_03_complex_argument_type(self):
+        # Arrange
+        expected_argument_type = "list[int]"
+        raw_argument = f"first: {expected_argument_type}"
+
+        # Act
+        actual_argument_type = p2m.extract_item_from_single_line(
+            raw_argument, p2m.argument_type_pattern, target_capture_group=1
+        )
+
+        # Assert
+        self.assertEqual(actual_argument_type, expected_argument_type)
+
+    def test_04_argument_type_with_comma(self):
+        # Arrange
+        expected_argument_type = "dict[str, int]"
+        raw_argument = f"first: {expected_argument_type}"
+
+        # Act
+        actual_argument_type = p2m.extract_item_from_single_line(
+            raw_argument, p2m.argument_type_pattern, target_capture_group=1
+        )
+
+        # Assert
+        self.assertEqual(actual_argument_type, expected_argument_type)
+
+    def test_05_complex_argument_type_and_default_value(self):
+        # Arrange
+        expected_argument_type = "tuple[int, str]"
+        raw_argument = f"first: {expected_argument_type} = (2, 'asd')"
+
+        # Act
+        actual_argument_type = p2m.extract_item_from_single_line(
+            raw_argument, p2m.argument_type_pattern, target_capture_group=1
+        )
+
+        # Assert
+        self.assertEqual(actual_argument_type, expected_argument_type)
+
+    def test_06_no_whitespace(self):
+        # Arrange
+        expected_argument_type = "int"
+        raw_argument = f"first:{expected_argument_type}"
+
+        # Act
+        actual_argument_type = p2m.extract_item_from_single_line(
+            raw_argument, p2m.argument_type_pattern, target_capture_group=1
+        )
+
+        # Assert
+        self.assertEqual(actual_argument_type, expected_argument_type)
 
 
 class TestParseAttribute(unittest.TestCase):
@@ -1608,7 +2237,7 @@ class TestParseArgument(unittest.TestCase):
         """
         # Arrange
         raw_argument = "a: int"
-        expected_call = call(raw_argument, p2m.argument_pattern, target_capture_group=1)
+        expected_call = call(raw_argument, p2m.argument_name_pattern, target_capture_group=1)
         mocked_extract_item.return_value = "a: int"
 
         # Act

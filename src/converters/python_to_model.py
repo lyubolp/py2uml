@@ -10,29 +10,34 @@ from re import Pattern
 from src.models import ClassModel, ClassType, Method, Variable, Visibility
 from src.string_utils import get_indentation_level
 
+IDENTIFIER_PATTERN = r"[^\d\W]\w*"
+TYPE_PATTERN = r"[^\d\W][\w\[\], ]*"
+
 # Class-related patterns
-class_pattern = re.compile(r"class (.*):")
-class_name_pattern = re.compile(r"class ([a-zA-Z0-9]*).*:")
-class_parents_pattern = re.compile(r"class .*\((.*)\)")
+class_type_pattern = re.compile(r"class (.*):")
+class_name_pattern = re.compile(r"class *([a-zA-Z0-9_]*).*:")
+class_parents_pattern = re.compile(r"class .*\((.*)\)")  # Looks unused
 
 # Attribute-related patterns
-attribute_pattern = re.compile(r"self\.(.*) =")
+attribute_pattern = re.compile(r"self\.(.*) *=.*")
 attribute_name_pattern = re.compile(r"self\.(_){0,2}(.*) =")
-argument_type_pattern = re.compile(r"self\..* *: *(.*) =")
+attribute_type_pattern = re.compile(r"self\..* *: *(.*) =")
 
 # Method-related patterns
 method_pattern = re.compile(r"def .*\(self.*\).*:")
-method_name_pattern = re.compile(r"def (.*)\(self.*")
-method_return_type_pattern = re.compile(r"def .*\(.*\) *-> *([a-zA-Z0-9_-]*).*")
+method_name_pattern = re.compile(rf"def +({IDENTIFIER_PATTERN}) *\(self.*")
+method_return_type_pattern = re.compile(rf"""def .*\(.*\) *-> *({TYPE_PATTERN}).*""")
 
 # Argument-related patterns
-# TODO - Consider changing all other variable name captures to this group
 arguments_pattern = re.compile(r".*\((.*)\).*")
-argument_pattern = re.compile(r"([a-zA-Z0-9_-]).*")
-argument_type_pattern = re.compile(r".*: *(.*) +=.*")
+argument_name_pattern = re.compile(rf"({IDENTIFIER_PATTERN}).*")
+argument_type_pattern = re.compile(rf".*: *({TYPE_PATTERN})")
 
 STATIC_METHOD_NAME = "@staticmethod"
 ABSTRACT_METHOD_NAME = "@abstractmethod"
+
+# TODO - What about classmethods ?
+
 
 # Other constants
 PARENT_ABSTRACT_NAME = "ABC"
@@ -157,7 +162,7 @@ def get_class_type(content: str) -> ClassType:
     content = content.strip()
 
     try:
-        class_type: str = extract_item_from_single_line(content, class_pattern, target_capture_group=1)
+        class_type: str = extract_item_from_single_line(content, class_type_pattern, target_capture_group=1)
     except ValueError:
         return ClassType.CLASS
 
@@ -194,7 +199,7 @@ def parse_method(raw_method: str) -> Method:
     raw_method = raw_method.strip()
 
     try:
-        method_name = extract_item_from_single_line(raw_method, method_name_pattern, target_capture_group=1)
+        method_name = extract_item_from_single_line(raw_method, method_name_pattern, target_capture_group=1).strip()
     except ValueError:
         method_name = ""
 
@@ -222,6 +227,7 @@ def parse_arguments(raw_method: str) -> list[Variable]:
     if raw_arguments == "":
         return []
 
+    # TODO - This will cause bugs - what if the type hint has a ,
     arguments = [argument.strip() for argument in raw_arguments.split(",")]
 
     parsed_arguments = [parse_argument(argument) for argument in arguments]
@@ -316,7 +322,7 @@ def extract_item_from_single_line(content: str, item_pattern: Pattern, target_ca
     """
     match item_pattern.match(content):
         case re.Match() as match_result:
-            return match_result.group(target_capture_group)
+            return match_result.group(target_capture_group).strip()
         case None:
             raise ValueError("No item found")
         case _:
@@ -334,6 +340,7 @@ def parse_attribute(line: str) -> Variable:
     """
 
     line = line.strip()
+    # TODO - Refactor this
     match attribute_name_pattern.match(line):
         case re.Match() as match_result:
             attribute_name = match_result.group(2)
@@ -342,7 +349,8 @@ def parse_attribute(line: str) -> Variable:
 
     attribute_visibility = parse_visibility(line)
 
-    match argument_type_pattern.match(line):
+    # TODO - Refactor this
+    match attribute_type_pattern.match(line):
         case re.Match() as match_result:
             attribute_type = match_result.group(1)
         case None:
@@ -361,7 +369,7 @@ def parse_argument(raw_argument: str) -> Variable:
     """
 
     try:
-        argument_name = extract_item_from_single_line(raw_argument, argument_pattern, target_capture_group=1)
+        argument_name = extract_item_from_single_line(raw_argument, argument_name_pattern, target_capture_group=1)
     except ValueError as error:
         raise ValueError("No argument name found") from error
 
