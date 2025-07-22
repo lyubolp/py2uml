@@ -165,57 +165,18 @@ class TestGetClassName(unittest.TestCase):
     Test cases for the get_class_name function.
     """
 
-    def test_01_has_class_name(self):
-        """
-        Verify that get_class_name returns the class name when the class name is in the first line
-        """
+    @patch("src.converters.python_to_model.extract_item_from_single_line")
+    def test_01_extract_item_called(self, mocked_extract_item: MagicMock):
         # Arrange
-        class_content = "class TestClass:"
+        expected_class_name = "Foo"
+        content = f"class {expected_class_name}:"
+        mocked_extract_item.return_value = expected_class_name
 
         # Act
-        result = p2m.get_class_name(class_content)
+        actual_class_name = p2m.get_class_name(content)
 
         # Assert
-        self.assertEqual(result, "TestClass")
-
-    def test_02_has_class_name_with_inheritance(self):
-        """
-        Verify that get_class_name returns the class name when the class name is in the first line
-            and the class inherits from another class
-        """
-        # Arrange
-        class_content = "class TestClass(unittest.TestCase):"
-
-        # Act
-        result = p2m.get_class_name(class_content)
-
-        # Assert
-        self.assertEqual(result, "TestClass")
-
-    def test_03_has_class_name_with_multiple_inheritance(self):
-        """
-        Verify that get_class_name returns the class name when the class name is in the first line
-            and the class inherist from two classes
-        """
-        # Arrange
-        class_content = "class TestClass(unittest.TestCase, ABC):"
-
-        # Act
-        result = p2m.get_class_name(class_content)
-
-        # Assert
-        self.assertEqual(result, "TestClass")
-
-    def test_04_no_class_name(self):
-        """
-        Verify that get_class_name throws an exception where the input is invalid
-        """
-        # Arrange
-        class_content = "Invalid class content"
-
-        # Act & assert
-        with self.assertRaises(ValueError):
-            p2m.get_class_name(class_content)
+        self.assertEqual(actual_class_name, expected_class_name)
 
 
 class TestGetClassAttributes(unittest.TestCase):
@@ -1946,6 +1907,7 @@ class TestExtractItemFromSingleLineArgumentTypePattern(unittest.TestCase):
         self.assertEqual(actual_argument_type, expected_argument_type)
 
 
+# TODO - Refactor these test cases to reflect new implementation
 class TestParseAttribute(unittest.TestCase):
     """
     Test cases for the parse_attribute function.

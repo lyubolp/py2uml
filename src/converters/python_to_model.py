@@ -340,21 +340,17 @@ def parse_attribute(line: str) -> Variable:
     """
 
     line = line.strip()
-    # TODO - Refactor this
-    match attribute_name_pattern.match(line):
-        case re.Match() as match_result:
-            attribute_name = match_result.group(2)
-        case None:
-            raise ValueError("No attribute name found")
+    try:
+        attribute_name = extract_item_from_single_line(line, attribute_name_pattern, target_capture_group=2)
+    except ValueError as exc:
+        raise ValueError("No attribute name found") from exc
 
     attribute_visibility = parse_visibility(line)
 
-    # TODO - Refactor this
-    match attribute_type_pattern.match(line):
-        case re.Match() as match_result:
-            attribute_type = match_result.group(1)
-        case None:
-            attribute_type = ""
+    try:
+        attribute_type = extract_item_from_single_line(line, attribute_type_pattern, target_capture_group=1)
+    except ValueError:
+        attribute_type = ""
 
     return Variable(attribute_name, attribute_visibility, attribute_type)
 
