@@ -31,9 +31,9 @@ Python script that generates UML class diagrams from Python source code.
 
 ## Limitations
 
-    - Does not support classes defined in other classes
-    - Does not support multiline attribute definitions
-    - Does not support links between classes
-    - Missing class attributes
-    - Does not support data classes
-    - Does not support just functions
+- Does not support classes defined in other classes
+- Does not support multiline attribute definitions
+- Does not support links between classes
+- Missing class attributes
+- Does not support data classes
+- Does not support just functions
