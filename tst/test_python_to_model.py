@@ -1573,6 +1573,19 @@ class TestExtractItemFromSingleLineMethodNamePattern(unittest.TestCase):
         # Assert
         self.assertEqual(actual_method_name, expected_method_name)
 
+    def test_05_no_self(self):
+        # Arrange
+        expected_method_name = "foo"
+        content = f"def {expected_method_name}() -> bool:"
+
+        # Act
+        actual_method_name = p2m.extract_item_from_single_line(
+            content, p2m.method_name_pattern, target_capture_group=1
+        )
+
+        # Assert
+        self.assertEqual(actual_method_name, expected_method_name)
+
 
 class TestExtractItemFromSingleLineMethodReturnTypePattern(unittest.TestCase):
     def test_01_return_type(self):
