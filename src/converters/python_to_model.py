@@ -25,7 +25,7 @@ attribute_type_pattern = re.compile(r"self\..* *: *(.*) =")
 
 # Method-related patterns
 method_pattern = re.compile(r"def .*\(self.*\).*:")
-method_name_pattern = re.compile(rf"def +({IDENTIFIER_PATTERN}) *\(self.*")
+method_name_pattern = re.compile(rf"def +({IDENTIFIER_PATTERN}) *\(.*")
 method_return_type_pattern = re.compile(rf"""def .*\(.*\) *-> *({TYPE_PATTERN}).*""")
 
 # Argument-related patterns
@@ -82,6 +82,8 @@ def generate_model(file_content: list[str]) -> ClassModel:
 
     static_methods = result if (result := get_static_methods(file_content)) else None
     abstract_methods = result if (result := get_abstract_methods(file_content)) else None
+
+    # TODO - Abstract methods are present in both `methods` and `abstract_methods`
 
     return ClassModel(class_name, class_attributes, methods, class_type, static_methods, abstract_methods)
 
