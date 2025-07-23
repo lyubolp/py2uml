@@ -1,41 +1,42 @@
 """
 Module containing the converters which will be used to generate the UML diagrams.
 """
+
 from typing import Optional
 
 from src.models import ClassModel, ClassType, LinkType, Method, Variable, Visibility
 
-__all__ = ['generate_platuml_class_diagram']
+__all__ = ["generate_platuml_class_diagram"]
 
 ClassLink = tuple[LinkType, ClassModel]
 
 LINK_TYPE_TO_PLANTUML = {
-    LinkType.EXTENSION: '<|--',
-    LinkType.COMPOSITION: '*--',
-    LinkType.AGGREGATION: 'o--',
-    LinkType.NORMAL: '--'
+    LinkType.EXTENSION: "<|--",
+    LinkType.COMPOSITION: "*--",
+    LinkType.AGGREGATION: "o--",
+    LinkType.NORMAL: "--",
 }
 
 VISIBILITY_TO_PLANTUML = {
-    Visibility.PRIVATE: '-',
-    Visibility.PROTECTED: '#',
-    Visibility.PUBLIC: '+',
+    Visibility.PRIVATE: "-",
+    Visibility.PROTECTED: "#",
+    Visibility.PUBLIC: "+",
 }
 
 CLASS_TYPE_TO_PLANTUML = {
-    ClassType.ABSTRACT: 'abstract',
-    ClassType.CLASS: 'class',
-    ClassType.ENUM: 'enum',
-    ClassType.EXCEPTION: 'exception'
+    ClassType.ABSTRACT: "abstract",
+    ClassType.CLASS: "class",
+    ClassType.ENUM: "enum",
+    ClassType.EXCEPTION: "exception",
 }
 
-STATIC_METHOD_TO_PLANTUML = '{static}'
-ABSTRACT_METHOD_TO_PLANTUML = '{abstract}'
+STATIC_METHOD_TO_PLANTUML = "{static}"
+ABSTRACT_METHOD_TO_PLANTUML = "{abstract}"
 
 
-def generate_platuml_class_diagram(classes: list[ClassModel],
-                                   links: Optional[dict[ClassModel,
-                                                        list[ClassLink]]]) -> list[str]:
+def generate_platuml_class_diagram(
+    classes: list[ClassModel], links: Optional[dict[ClassModel, list[ClassLink]]]
+) -> list[str]:
     """
     Generate the PlantUML code for a class diagram.
     :param classes: The classes of the diagram.
@@ -68,7 +69,7 @@ def generate_plantuml_class(class_model: ClassModel) -> list[str]:
     """
     contents = []
 
-    contents.append(f'{CLASS_TYPE_TO_PLANTUML[class_model.class_type]} {class_model.name} ' + '{')
+    contents.append(f"{CLASS_TYPE_TO_PLANTUML[class_model.class_type]} {class_model.name} " + "{")
 
     # Handle attributes
     if class_model.attributes is not None:
@@ -86,7 +87,7 @@ def generate_plantuml_class(class_model: ClassModel) -> list[str]:
     if class_model.abstract_methods is not None:
         contents += generate_plantuml_abstract_methods(class_model)
 
-    contents.append('}')
+    contents.append("}")
     return contents
 
 
@@ -97,7 +98,7 @@ def generate_plantuml_link(class_model: ClassModel, link: ClassLink) -> str:
     :param link: The link between the two classes.
     :return: The PlantUML code for the link.
     """
-    return f'{class_model.name} {LINK_TYPE_TO_PLANTUML[link[0]]} {link[1].name}'
+    return f"{class_model.name} {LINK_TYPE_TO_PLANTUML[link[0]]} {link[1].name}"
 
 
 def generate_plantuml_class_attributes(class_model: ClassModel) -> list[str]:
@@ -109,8 +110,7 @@ def generate_plantuml_class_attributes(class_model: ClassModel) -> list[str]:
     if class_model.attributes is None:
         return []
 
-    return ['\t' + generate_plantuml_class_attribute(attribute)
-            for attribute in class_model.attributes]
+    return ["\t" + generate_plantuml_class_attribute(attribute) for attribute in class_model.attributes]
 
 
 def generate_plantuml_class_attribute(attribute: Variable) -> str:
@@ -121,7 +121,7 @@ def generate_plantuml_class_attribute(attribute: Variable) -> str:
     """
     attribute_visibility = VISIBILITY_TO_PLANTUML[attribute.visibility]
 
-    return f'{attribute_visibility}{attribute.variable_type} {attribute.name}'
+    return f"{attribute_visibility}{attribute.variable_type} {attribute.name}"
 
 
 def generate_plantuml_class_methods(class_model: ClassModel) -> list[str]:
@@ -133,7 +133,7 @@ def generate_plantuml_class_methods(class_model: ClassModel) -> list[str]:
     if class_model.methods is None:
         return []
 
-    return ['\t' + generate_plantuml_class_method(method) for method in class_model.methods]
+    return ["\t" + generate_plantuml_class_method(method) for method in class_model.methods]
 
 
 def generate_plantuml_class_method(method: Method) -> str:
@@ -143,20 +143,26 @@ def generate_plantuml_class_method(method: Method) -> str:
     :return: The PlantUML code for the method.
     """
     method_visibility = VISIBILITY_TO_PLANTUML[method.visibility]
-    method_return_type = method.return_type if method.return_type is not None else ''
+    method_return_type = method.return_type if method.return_type is not None else ""
 
-    method_arguments = ''
+    method_arguments = ""
 
     if method.arguments is not None:
-        method_arguments = ', '.join([f'{argument.variable_type} {argument.name}'
-                                      for argument in method.arguments])
+        method_arguments = ", ".join([__generate_method_argument(argument) for argument in method.arguments])
 
-    items = [method_visibility, method.name, '(', method_arguments, ')']
+    items = [method_visibility, method.name, "(", method_arguments, ")"]
 
-    if method_return_type != '':
-        items += [': ', method_return_type]
+    if method_return_type != "":
+        items += [": ", method_return_type]
 
-    return ''.join(items)
+    return "".join(items)
+
+
+def __generate_method_argument(argument: Variable) -> str:
+    if argument.variable_type == "":
+        return f"{argument.name}"
+
+    return f"{argument.name}: {argument.variable_type}"
 
 
 def generate_plantuml_static_methods(class_model: ClassModel) -> list[str]:
@@ -168,8 +174,7 @@ def generate_plantuml_static_methods(class_model: ClassModel) -> list[str]:
     if class_model.static_methods is None:
         return []
 
-    return ['\t' + generate_plantuml_static_method(method)
-            for method in class_model.static_methods]
+    return ["\t" + generate_plantuml_static_method(method) for method in class_model.static_methods]
 
 
 def generate_plantuml_static_method(method: Method) -> str:
@@ -178,7 +183,7 @@ def generate_plantuml_static_method(method: Method) -> str:
     :param method: The method to generate the code for.
     :return: The PlantUML code for the static method.
     """
-    return STATIC_METHOD_TO_PLANTUML + ' ' + generate_plantuml_class_method(method)
+    return STATIC_METHOD_TO_PLANTUML + " " + generate_plantuml_class_method(method)
 
 
 def generate_plantuml_abstract_methods(class_model: ClassModel) -> list[str]:
@@ -190,8 +195,7 @@ def generate_plantuml_abstract_methods(class_model: ClassModel) -> list[str]:
     if class_model.abstract_methods is None:
         return []
 
-    return ['\t' + generate_plantuml_abstract_method(method)
-            for method in class_model.abstract_methods]
+    return ["\t" + generate_plantuml_abstract_method(method) for method in class_model.abstract_methods]
 
 
 def generate_plantuml_abstract_method(method: Method) -> str:
@@ -200,4 +204,4 @@ def generate_plantuml_abstract_method(method: Method) -> str:
     :param method: The method to generate the code for.
     :return: The PlantUML code for the abstract method.
     """
-    return ABSTRACT_METHOD_TO_PLANTUML + ' ' + generate_plantuml_class_method(method)
+    return ABSTRACT_METHOD_TO_PLANTUML + " " + generate_plantuml_class_method(method)
