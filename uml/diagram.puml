@@ -1,0 +1,18 @@
+@startuml
+abstract AbstractCheck {
+	# name
+	- project_root
+	- is_venv_required
+	-__init__(self, name: str, project_root: str, is_venv_requred: bool)
+	+run(self): CheckResult[T]
+	+name(self): str
+	-_pre_run(self): None
+	{static} -is_running_within_venv(): bool
+	{abstract} +run(self): CheckResult[T]
+}
+class ScoredCheck {
+	- max_points
+	-__init__(self, name: str, max_points: int, project_root: str, is_venv_requred: bool)
+	#max_points(self): int
+}
+@enduml
