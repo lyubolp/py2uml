@@ -36,6 +36,18 @@ impl Variable {
             variable_type: variable_type.clone(),
         }
     }
+
+    pub fn name(&self) -> &String {
+        &self.name
+    }
+
+    pub fn visibility(&self) -> &Visibility {
+        &self.visibility
+    }
+
+    pub fn variable_type(&self) -> &String {
+        &self.variable_type
+    }
 }
 
 #[derive(Debug)]
@@ -59,6 +71,22 @@ impl Function {
             arguments,
             return_type,
         }
+    }
+
+    pub fn name(&self) -> &String {
+        &self.name
+    }
+
+    pub fn visibility(&self) -> &Visibility {
+        &self.visibility
+    }
+
+    pub fn arguments(&self) -> &Option<Vec<Variable>> {
+        &self.arguments
+    }
+
+    pub fn return_type(&self) -> &Option<String> {
+        &self.return_type
     }
 }
 
@@ -92,5 +120,33 @@ impl ClassModel {
             static_methods,
             abstract_methods,
         }
+    }
+
+    pub fn name(&self) -> &String {
+        &self.name
+    }
+
+    pub fn attributes(&self) -> &Option<Vec<Variable>> {
+        &self.attributes
+    }
+
+    pub fn methods(&self) -> &Option<Vec<Function>> {
+        &self.methods
+    }
+
+    pub fn properties(&self) -> &Option<Vec<Variable>> {
+        &self.properties
+    }
+
+    pub fn class_type(&self) -> &ClassType {
+        &self.class_type
+    }
+
+    pub fn static_methods(&self) -> &Option<Vec<Function>> {
+        &self.static_methods
+    }
+
+    pub fn abstract_methods(&self) -> &Option<Vec<Function>> {
+        &self.abstract_methods
     }
 }
