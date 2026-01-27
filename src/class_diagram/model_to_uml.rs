@@ -8,7 +8,7 @@ pub fn generate_plantuml(models: &Vec<models::ClassModel>) -> Vec<String> {
     result.push(String::from(""));
 
     for model in models {
-        let uml_lines = model_to_uml(&model);
+        let uml_lines = model_to_uml(model);
         for line in uml_lines {
             result.push(line);
         }
@@ -86,7 +86,7 @@ fn arguments_to_uml(arguments: Option<&Vec<models::Variable>>) -> String {
     match arguments {
         Some(args) => args
             .iter()
-            .map(|arg| argument_to_uml(arg))
+            .map(argument_to_uml)
             .collect::<Vec<String>>()
             .join(", "),
         None => String::from(""),
@@ -95,7 +95,7 @@ fn arguments_to_uml(arguments: Option<&Vec<models::Variable>>) -> String {
 
 fn argument_to_uml(argument: &models::Variable) -> String {
     if argument.variable_type().is_empty() {
-        format!("{}", argument.name())
+        argument.name().to_string()
     } else {
         format!("{}: {}", argument.name(), argument.variable_type())
     }

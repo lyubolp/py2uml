@@ -73,8 +73,7 @@ fn build_tree_from_dependency_graph(graph: &Graph<PythonModule>) -> TreeNode {
         let mut packages: Vec<String> = node
             .get_packages()
             .iter()
-            .filter(|item| *item != "")
-            .map(|item| item.clone())
+            .filter(|item| !item.is_empty()).cloned()
             .collect();
         packages.push(node.get_name().clone());
 
@@ -85,22 +84,21 @@ fn build_tree_from_dependency_graph(graph: &Graph<PythonModule>) -> TreeNode {
 }
 
 fn declare_modules_into_packages(root: &TreeNode, level: usize, buffer: &mut Vec<String>) {
-    if root.get_children().len() == 0 {
-        buffer.push(String::from(format!(
+    if root.get_children().is_empty() {
+        buffer.push(format!(
             "{}[\"{}\"]",
             " ".repeat(level * 4),
             root.get_value()
-        )));
-        return;
+        ));
     } else {
-        buffer.push(String::from(format!(
+        buffer.push(format!(
             "{}package \"{}\" {{",
             " ".repeat(level * 4),
             root.get_value()
-        )));
+        ));
         for child in root.get_children().iter().rev() {
             declare_modules_into_packages(child, level + 1, buffer);
         }
-        buffer.push(String::from(format!("{}{}", " ".repeat(level * 4), "}")));
+        buffer.push(format!("{}{}", " ".repeat(level * 4), "}"));
     }
 }

@@ -7,7 +7,7 @@ pub fn is_import_internal(import: &String, root_dir: &str) -> bool {
 }
 
 pub fn split_import(import: &str) -> Vec<String> {
-    import.split(".").map(|s| String::from(s)).collect()
+    import.split(".").map(String::from).collect()
 }
 
 pub fn extract_module_name_from_import(import: &String, root_dir: &str) -> String {

@@ -5,16 +5,14 @@ use std::fs::read;
 use super::models;
 
 pub fn generate_models(filepaths: &Vec<String>) -> Vec<models::ClassModel> {
-    let result = filepaths
+    
+
+    filepaths
         .iter()
-        .map(|filepath| extract_classes(filepath))
-        .filter(|result| result.is_ok())
-        .map(|result| result.unwrap())
+        .flat_map(extract_classes)
         .flatten()
         .map(|class| generate_model(&class))
-        .collect();
-
-    result
+        .collect()
 }
 
 fn generate_model(class: &StmtClassDef) -> models::ClassModel {
@@ -39,8 +37,7 @@ fn extract_classes(filepath: &String) -> Result<Vec<StmtClassDef>, String> {
             .clone()
             .into_iter()
             .filter_map(|stmt| stmt.class_def_stmt())
-            .collect::<Vec<StmtClassDef>>()
-            .into()),
+            .collect::<Vec<StmtClassDef>>()),
         Err(e) => Err(format!("Failed to parse Python file: {}", e)),
     }
 }
@@ -53,16 +50,14 @@ fn extract_attributes(parser_model: &StmtClassDef) -> Option<Vec<models::Variabl
     let Some(init_function) = parser_model
         .body
         .iter()
-        .filter_map(|item| item.clone().function_def_stmt())
-        .filter(|function| function.name.eq("__init__"))
-        .next()
+        .filter_map(|item| item.clone().function_def_stmt()).find(|function| function.name.eq("__init__"))
     else {
         return None;
     };
 
     let raw_attributes = extract_raw_attributes(&init_function);
 
-    if raw_attributes.len() > 0 {
+    if !raw_attributes.is_empty() {
         Some(
             raw_attributes
                 .iter()
@@ -85,8 +80,8 @@ fn extract_raw_attributes(init_function: &StmtFunctionDef) -> Vec<String> {
         stack.push(statement);
     }
 
-    while !stack.is_empty() {
-        let current = stack.pop().unwrap();
+    while let Some(current) = stack.pop() {
+        
 
         match current {
             Stmt::AugAssign(ruff_python_ast::StmtAugAssign { target, .. })
@@ -138,11 +133,11 @@ fn extract_methods(parser_model: &StmtClassDef) -> Option<Vec<models::Function>>
         .filter(|function| !does_function_have_decorator(function, &String::from("staticmethod")))
         .collect::<Vec<StmtFunctionDef>>();
 
-    if raw_methods.len() > 0 {
+    if !raw_methods.is_empty() {
         Some(
             raw_methods
                 .iter()
-                .map(|method| extract_method(method))
+                .map(extract_method)
                 .collect(),
         )
     } else {
@@ -179,10 +174,10 @@ fn extract_method_arguments(method: &StmtFunctionDef) -> Option<Vec<models::Vari
     }
 
     if let Some(argument) = &method.parameters.vararg {
-        result.push(extract_method_argument(&argument));
+        result.push(extract_method_argument(argument));
     }
 
-    if result.len() > 0 { Some(result) } else { None }
+    if !result.is_empty() { Some(result) } else { None }
 }
 
 fn extract_method_argument(argument: &Parameter) -> models::Variable {
@@ -203,10 +198,7 @@ fn extract_method_argument(argument: &Parameter) -> models::Variable {
 
 fn extract_method_return_type(method: &StmtFunctionDef) -> Option<String> {
     match &method.returns {
-        Some(annotation) => match annotation.as_name_expr() {
-            Some(name_expr) => Some(name_expr.id.clone()),
-            None => None,
-        },
+        Some(annotation) => annotation.as_name_expr().map(|name_expr| name_expr.id.clone()),
         None => None,
     }
 }
@@ -219,7 +211,7 @@ fn extract_properties(parser_model: &StmtClassDef) -> Option<Vec<models::Variabl
         .filter(|function| does_function_have_decorator(function, &String::from("property")))
         .collect::<Vec<StmtFunctionDef>>();
 
-    if raw_properties.len() > 0 {
+    if !raw_properties.is_empty() {
         Some(
             raw_properties
                 .iter()
@@ -242,7 +234,7 @@ fn does_function_have_decorator(function: &StmtFunctionDef, decorator_name: &Str
         decorator
             .expression
             .as_name_expr()
-            .map_or(false, |name| name.id == *decorator_name)
+            .is_some_and(|name| name.id == *decorator_name)
     })
 }
 
@@ -254,11 +246,11 @@ fn extract_abstract_methods(parser_model: &StmtClassDef) -> Option<Vec<models::F
         .filter(|function| does_function_have_decorator(function, &String::from("abstractmethod")))
         .collect::<Vec<StmtFunctionDef>>();
 
-    if raw_methods.len() > 0 {
+    if !raw_methods.is_empty() {
         Some(
             raw_methods
                 .iter()
-                .map(|method| extract_method(method))
+                .map(extract_method)
                 .collect(),
         )
     } else {
@@ -274,11 +266,11 @@ fn extract_static_methods(parser_model: &StmtClassDef) -> Option<Vec<models::Fun
         .filter(|function| does_function_have_decorator(function, &String::from("staticmethod")))
         .collect::<Vec<StmtFunctionDef>>();
 
-    if raw_methods.len() > 0 {
+    if !raw_methods.is_empty() {
         Some(
             raw_methods
                 .iter()
-                .map(|method| extract_method(method))
+                .map(extract_method)
                 .collect(),
         )
     } else {

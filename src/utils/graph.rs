@@ -50,10 +50,10 @@ impl<T: Clone + Eq + Hash> Graph<T> {
         let start_id = self.node_to_id[start];
         let end_id = self.node_to_id[end];
 
-        if self.edges.contains_key(&start_id) {
-            self.edges.get_mut(&start_id).unwrap().push(end_id);
+        if let std::collections::hash_map::Entry::Vacant(e) = self.edges.entry(start_id) {
+            e.insert(vec![end_id]);
         } else {
-            self.edges.insert(start_id, vec![end_id]);
+            self.edges.get_mut(&start_id).unwrap().push(end_id);
         }
 
         Ok("Edge added successfully")
@@ -70,7 +70,7 @@ impl<T: Clone + Eq + Hash> Graph<T> {
         if !self.edges.contains_key(&start_id) {
             return false;
         }
-        return self.edges[&start_id].contains(&end_id);
+        self.edges[&start_id].contains(&end_id)
     }
 
     pub fn get_edges(&self, node: &T) -> Result<Vec<T>, &str> {
