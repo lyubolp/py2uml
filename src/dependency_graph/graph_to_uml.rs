@@ -1,6 +1,6 @@
-use crate::utils::tree::{TreeNode, insert};
-use crate::utils::graph::Graph;
 use super::module::PythonModule;
+use crate::utils::graph::Graph;
+use crate::utils::tree::{TreeNode, insert};
 
 pub fn generate_plantuml(graph: &Graph<PythonModule>) -> Vec<String> {
     let colors: Vec<&str> = vec![
