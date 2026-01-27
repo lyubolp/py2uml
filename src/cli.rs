@@ -1,5 +1,11 @@
-use clap::Parser;
+use clap::{Parser, ValueEnum};
 use std::path::PathBuf;
+
+#[derive(Debug, Clone, Copy, ValueEnum)]
+pub enum DiagramType {
+    Dependency,
+    Class,
+}
 
 #[derive(Parser)]
 #[command(
@@ -15,6 +21,10 @@ pub struct Args {
     /// Path to save the PlantUML diagram
     #[arg(help = "Output file for the PlantUML diagram (must end with .puml)")]
     pub output_path: PathBuf,
+
+    /// Type of diagram to generate
+    #[arg(short, long, help = "Type of diagram to generate")]
+    pub diagram_type: DiagramType,
 }
 
 impl Args {
