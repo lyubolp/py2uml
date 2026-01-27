@@ -10,24 +10,20 @@ Python script that generates UML class diagrams from Python source code.
 - For each class, extract all attributes and methods
 - Attributes have their names, types and visibility extracted
 - Methods have their names, return types, parameters and visibility extracted
-- Classes have their name, attributes, methods, class type, static methods and abstract methods extracted
-- Generate a UML class diagram in PlantUML format
+- Classes have their name, attributes, methods, static methods and abstract methods extracted
 
 ## TODOs
 
-- For each class, extract all attributes and methods
-- Attributes have their names, types and visibility extracted
-- Methods have their names, return types, parameters and visibility extracted
-- Classes have their name, attributes, methods, class type, static methods and abstract methods extracted
 - Generate a UML class diagram in PlantUML format
-- Add support for class inheritance
+- Class types
+- Add support for class inheritance/relationships
 - Think about functions and their representation
 - Consider replacing empty strings with None
 - Unit tests
 - Functional tests that verify the functionality
 - Documentation
 - CI/CD pipeline
-- PyPI package
+- cargo package
 
 ## Limitations
 

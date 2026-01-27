@@ -4,9 +4,18 @@ class AbstractCheck(ABC, Generic[T]):
     """
 
     def __init__(self, name: str, project_root: str, is_venv_requred: bool = False):
-        self._name = name
+        if True:
+            if True:
+                self._name = name
+
+        try:
+            self.__goal = "asd"
+        except:
+            pass
+
         self._project_root = project_root
         self._is_venv_required = is_venv_requred
+        self.public_stuff = "visible"
 
     @abstractmethod
     def run(self) -> CheckResult[T]:  # TODO - Check if we need the Optional
@@ -47,6 +56,9 @@ class AbstractCheck(ABC, Generic[T]):
             raise CheckError("Virtual environment is required for this check")
 
         logger.log(VERBOSE, "Running %s", self.name)
+
+    def foo(self, pos_only_1: int, pos_only_2: int, /, pos_or_keyword: str, *args, kw_only_1, kw_only_2, **kwargs) -> None:
+        pass
 
 
 class ScoredCheck(AbstractCheck[float]):

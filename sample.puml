@@ -1,32 +1,19 @@
 @startuml
 
-
-
-set separator ::
-
-
-
-abstract grader::checks::abstract_check::AbstractCheck<T> {
-    +init(name: str, project_root: str, is_venv_required)
-    +run(): CheckResult[T]
-    +name: str
-    {static} +is_running_within_venv(): bool
-    #pre_run()
+class AbstractCheck {
+    + public_stuff
+    # _is_venv_required
+    # _project_root
+    - __goal
+    # _name
+    # _pre_run(self) : void
+    + foo(pos_or_keyword: str, kwargs, kw_only_1, kw_only_2, self, pos_only_1: int, pos_only_2: int, args) : void
 }
 
-class grader::checks::abstract_check::CheckResult<T> {
-    name: str,
-    result: T
+
+class ScoredCheck {
+    # _max_points
 }
 
-class grader::checks::abstract_check::ScoredResultCheck<T>
-class grader::checks::abstract_check::NonScoredResultCheck
-
-ScoredResultCheck -> CheckResult
-NonScoredResultCheck -> CheckResult : <T=bool>
-
-class grader::checks::abstract_check::ScoredCheck {
-
-}
 
 @enduml
