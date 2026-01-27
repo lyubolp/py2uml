@@ -1,21 +1,18 @@
+mod class_diagram;
 mod cli;
 mod constants;
-mod file_utils;
-mod graph;
-mod graph_to_uml;
-mod module;
-mod python_to_graph;
-mod python_utils;
-mod tree;
+mod dependency_graph;
+mod utils;
 
 use clap::Parser;
 use std::fs::File;
 use std::io::Write;
 
+use crate::class_diagram::python_to_model::generate_models;
 use crate::cli::Args;
-use crate::file_utils::discover_files;
-use crate::graph_to_uml::generate_plantuml;
-use crate::python_to_graph::build_dependency_graph;
+use crate::dependency_graph::graph_to_uml::generate_plantuml;
+use crate::utils::file_utils::discover_files;
+use crate::dependency_graph::python_to_graph::build_dependency_graph;
 
 fn run() -> Result<(), String> {
     let args = Args::parse();
@@ -36,8 +33,12 @@ fn run() -> Result<(), String> {
 }
 
 fn main() {
-    if let Err(e) = run() {
-        eprintln!("Error: {}", e);
-        std::process::exit(1);
-    }
+    // if let Err(e) = run() {
+    //     eprintln!("Error: {}", e);
+    //     std::process::exit(1);
+    // }
+
+    let result = generate_models(&vec![String::from("/Users/lyubolp/py2uml/sample.py")]);
+
+    println!("{:#?}", result);
 }
