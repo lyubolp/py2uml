@@ -73,7 +73,8 @@ fn build_tree_from_dependency_graph(graph: &Graph<PythonModule>) -> TreeNode {
         let mut packages: Vec<String> = node
             .get_packages()
             .iter()
-            .filter(|item| !item.is_empty()).cloned()
+            .filter(|item| !item.is_empty())
+            .cloned()
             .collect();
         packages.push(node.get_name().clone());
 
