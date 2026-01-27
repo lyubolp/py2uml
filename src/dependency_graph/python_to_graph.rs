@@ -3,9 +3,9 @@ use std::{collections::HashSet, fs::read, path::Path};
 use ruff_python_ast::Stmt;
 use ruff_python_parser;
 
-use crate::graph::Graph;
-use crate::module::PythonModule;
-use crate::python_utils::{extract_module_name_from_import, is_import_internal, split_import};
+use crate::utils::graph::Graph;
+use super::module::PythonModule;
+use super::python_utils::{extract_module_name_from_import, is_import_internal, split_import};
 
 pub fn build_dependency_graph(files: Vec<String>, root_dir: &str) -> Graph<PythonModule> {
     let mut graph = Graph::new();
