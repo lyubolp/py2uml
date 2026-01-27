@@ -1,23 +1,29 @@
-use clap::parser;
 use ruff_python_ast::{Parameter, Stmt, StmtClassDef, StmtFunctionDef};
 use ruff_python_parser;
-use std::{fs::read, result};
+use std::fs::read;
 
 use super::models;
 
 pub fn generate_models(filepaths: &Vec<String>) -> Vec<models::ClassModel> {
-    let classes = extract_classes(&filepaths[0]).unwrap();
+    let result = filepaths
+        .iter()
+        .map(|filepath| extract_classes(filepath))
+        .filter(|result| result.is_ok())
+        .map(|result| result.unwrap())
+        .flatten()
+        .map(|class| generate_model(&class))
+        .collect();
 
-    vec![generate_model(&classes[0])]
+    result
 }
 
 fn generate_model(class: &StmtClassDef) -> models::ClassModel {
     models::ClassModel::new(
         &extract_name(class),
         extract_attributes(class),
-        extract_methods(class), // TODO - All methods are here. Needs splitting
+        extract_methods(class),
         extract_properties(class),
-        models::ClassType::CLASS,
+        models::ClassType::CLASS, // TODO - Determine class type
         extract_static_methods(class),
         extract_abstract_methods(class),
     )
