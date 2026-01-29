@@ -1,12 +1,10 @@
-use ruff_python_ast::{Parameter, Stmt, StmtClassDef, StmtFunctionDef};
+use ruff_python_ast::{Expr, Parameter, Stmt, StmtClassDef, StmtFunctionDef};
 use ruff_python_parser;
 use std::fs::read;
 
 use super::models;
 
 pub fn generate_models(filepaths: &Vec<String>) -> Vec<models::ClassModel> {
-    
-
     filepaths
         .iter()
         .flat_map(extract_classes)
@@ -16,12 +14,18 @@ pub fn generate_models(filepaths: &Vec<String>) -> Vec<models::ClassModel> {
 }
 
 fn generate_model(class: &StmtClassDef) -> models::ClassModel {
+    let class_type = if let Some(parents) = &extract_parent_classes(class) {
+        determine_class_type_from_parents(parents)
+    } else {
+        models::ClassType::CLASS
+    };
+
     models::ClassModel::new(
         &extract_name(class),
         extract_attributes(class),
         extract_methods(class),
         extract_properties(class),
-        models::ClassType::CLASS, // TODO - Determine class type
+        class_type,
         extract_static_methods(class),
         extract_abstract_methods(class),
     )
@@ -50,7 +54,8 @@ fn extract_attributes(parser_model: &StmtClassDef) -> Option<Vec<models::Variabl
     let Some(init_function) = parser_model
         .body
         .iter()
-        .filter_map(|item| item.clone().function_def_stmt()).find(|function| function.name.eq("__init__"))
+        .filter_map(|item| item.clone().function_def_stmt())
+        .find(|function| function.name.eq("__init__"))
     else {
         return None;
     };
@@ -81,8 +86,6 @@ fn extract_raw_attributes(init_function: &StmtFunctionDef) -> Vec<String> {
     }
 
     while let Some(current) = stack.pop() {
-        
-
         match current {
             Stmt::AugAssign(ruff_python_ast::StmtAugAssign { target, .. })
             | Stmt::AnnAssign(ruff_python_ast::StmtAnnAssign { target, .. }) => {
@@ -134,12 +137,7 @@ fn extract_methods(parser_model: &StmtClassDef) -> Option<Vec<models::Function>>
         .collect::<Vec<StmtFunctionDef>>();
 
     if !raw_methods.is_empty() {
-        Some(
-            raw_methods
-                .iter()
-                .map(extract_method)
-                .collect(),
-        )
+        Some(raw_methods.iter().map(extract_method).collect())
     } else {
         None
     }
@@ -177,7 +175,11 @@ fn extract_method_arguments(method: &StmtFunctionDef) -> Option<Vec<models::Vari
         result.push(extract_method_argument(argument));
     }
 
-    if !result.is_empty() { Some(result) } else { None }
+    if !result.is_empty() {
+        Some(result)
+    } else {
+        None
+    }
 }
 
 fn extract_method_argument(argument: &Parameter) -> models::Variable {
@@ -198,7 +200,9 @@ fn extract_method_argument(argument: &Parameter) -> models::Variable {
 
 fn extract_method_return_type(method: &StmtFunctionDef) -> Option<String> {
     match &method.returns {
-        Some(annotation) => annotation.as_name_expr().map(|name_expr| name_expr.id.clone()),
+        Some(annotation) => annotation
+            .as_name_expr()
+            .map(|name_expr| name_expr.id.clone()),
         None => None,
     }
 }
@@ -247,12 +251,7 @@ fn extract_abstract_methods(parser_model: &StmtClassDef) -> Option<Vec<models::F
         .collect::<Vec<StmtFunctionDef>>();
 
     if !raw_methods.is_empty() {
-        Some(
-            raw_methods
-                .iter()
-                .map(extract_method)
-                .collect(),
-        )
+        Some(raw_methods.iter().map(extract_method).collect())
     } else {
         None
     }
@@ -267,13 +266,59 @@ fn extract_static_methods(parser_model: &StmtClassDef) -> Option<Vec<models::Fun
         .collect::<Vec<StmtFunctionDef>>();
 
     if !raw_methods.is_empty() {
+        Some(raw_methods.iter().map(extract_method).collect())
+    } else {
+        None
+    }
+}
+
+fn extract_parent_classes(class: &StmtClassDef) -> Option<Vec<String>> {
+    if let Some(args) = class.arguments.clone() {
         Some(
-            raw_methods
+            args.args
                 .iter()
-                .map(extract_method)
+                .filter_map(|base| extract_parent_class(base))
                 .collect(),
         )
     } else {
         None
+    }
+}
+
+fn extract_parent_class(argument: &Expr) -> Option<String> {
+    if argument.is_name_expr() {
+        Some(argument.as_name_expr().unwrap().id.clone())
+    } else if argument.is_subscript_expr() {
+        Some(
+            argument
+                .as_subscript_expr()
+                .unwrap()
+                .value
+                .as_name_expr()
+                .unwrap()
+                .id
+                .clone(),
+        )
+    } else {
+        println!("Unknown parent class expression: {:?}", argument);
+        None
+    }
+}
+
+fn determine_class_type_from_parents(parents: &Vec<String>) -> models::ClassType {
+    if parents
+        .iter()
+        .any(|parent| parent.eq("ABC") || parent.eq("ABCMeta"))
+    {
+        models::ClassType::ABSTRACT
+    } else if parents
+        .iter()
+        .any(|parent| parent.eq("Enum") || parent.eq("enum.Enum"))
+    {
+        models::ClassType::ENUM
+    } else if parents.iter().any(|parent| parent.eq("Exception")) {
+        models::ClassType::EXCEPTION
+    } else {
+        models::ClassType::CLASS
     }
 }

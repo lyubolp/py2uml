@@ -22,7 +22,14 @@ pub fn generate_plantuml(models: &Vec<models::ClassModel>) -> Vec<String> {
 fn model_to_uml(model: &models::ClassModel) -> Vec<String> {
     let mut result: Vec<String> = vec![];
 
-    result.push(format!("class {} {{", model.name()));
+    let class_type = match model.class_type() {
+        models::ClassType::CLASS => "class",
+        models::ClassType::ENUM => "enum",
+        models::ClassType::ABSTRACT => "abstract",
+        models::ClassType::EXCEPTION => "exception",
+        _ => "class",
+    };
+    result.push(format!("{} {} {{", class_type, model.name()));
 
     if let Some(attributes) = model.attributes() {
         for attribute in attributes {
