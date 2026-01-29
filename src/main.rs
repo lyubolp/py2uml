@@ -30,7 +30,7 @@ fn main() {
     let content = match args.diagram_type {
         DiagramType::Class => {
             println!("Generating class diagram...");
-            let models = generate_models(&vec![String::from("/Users/lyubolp/py2uml/sample.py")]);
+            let models = generate_models(&files);
             model_to_uml::generate_plantuml(&models)
         }
         DiagramType::Dependency => {
